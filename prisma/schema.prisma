@@ -93,12 +93,39 @@ model Project {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  versions ProjectVersion[]
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions           ProjectVersion[]
+  wizardAnswers      WizardAnswer[]
+  viabilityScores    ViabilityScore[]
+  evaluationFindings EvaluationFinding[]
+  risks              RiskMatrix[]
+  artifacts          GeneratedArtifact[]
+  templateMapping    TemplateMapping?
+  buildArtifacts     BuildArtifact[]
 
   @@index([userId])
   @@index([state])
   @@index([createdAt])
+}
+
+// ============================================================================
+// WIZARD INPUTS
+// ============================================================================
+
+model WizardAnswer {
+  id        String   @id @default(cuid())
+  projectId String
+  step      Int      // 1-10
+  key       String   // field identifier (e.g., "targetAudience", "problemStatement")
+  value     String?  @db.Text // JSON for complex values
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, step, key])
+  @@index([projectId])
 }
 
 // ============================================================================
@@ -124,4 +151,170 @@ model ProjectVersion {
   @@unique([projectId, versionNumber])
   @@index([projectId])
   @@index([createdAt])
+}
+
+
+// ============================================================================
+// EVALUATION & SCORING
+// ============================================================================
+
+model ViabilityScore {
+  id                String   @id @default(cuid())
+  projectId         String
+  marketScore       Float    // 0-25
+  productScore      Float    // 0-25
+  financialScore    Float    // 0-25
+  executionScore    Float    // 0-25
+  totalScore        Float    // 0-100
+  breakdownReasons  Json     // Array of {category, reason, points, penalty}
+  criticalFlags     Json     // Array of critical issue codes
+  computedAt        DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([computedAt])
+}
+
+enum FindingSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model EvaluationFinding {
+  id            String           @id @default(cuid())
+  projectId     String
+  severity      FindingSeverity
+  code          String           // e.g., "MONETIZATION_MISMATCH"
+  message       String           @db.Text
+  relatedFields Json?            // Array of wizard keys or artifact IDs
+  penaltyPoints Float            @default(0)
+  blocksBuild   Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([severity])
+  @@index([blocksBuild])
+}
+
+// ============================================================================
+// RISK MANAGEMENT
+// ============================================================================
+
+enum RiskCategory {
+  MARKET
+  PRODUCT
+  FINANCIAL
+  TECHNICAL
+  LEGAL
+  EXECUTION
+}
+
+model RiskMatrix {
+  id          String       @id @default(cuid())
+  projectId   String
+  category    RiskCategory
+  title       String
+  description String       @db.Text
+  impact      Int          // 1-5
+  probability Int          // 1-5
+  riskScore   Int          // impact * probability (1-25)
+  isCritical  Boolean      @default(false) // riskScore >= 16
+  mitigation  String?      @db.Text
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([isCritical])
+  @@index([riskScore])
+}
+
+// ============================================================================
+// ARTIFACTS
+// ============================================================================
+
+enum ArtifactType {
+  BUSINESS_MODEL_CANVAS
+  PRODUCT_REQUIREMENTS
+  TECHNICAL_ARCHITECTURE
+  USER_STORIES
+  RISK_ASSESSMENT
+  GO_TO_MARKET
+}
+
+model GeneratedArtifact {
+  id        String       @id @default(cuid())
+  projectId String
+  type      ArtifactType
+  title     String
+  content   String       @db.Text // Markdown or JSON
+  metadata  Json?        // Additional structured data
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, type])
+  @@index([projectId])
+}
+
+// ============================================================================
+// TEMPLATE MAPPING
+// ============================================================================
+
+enum TemplateType {
+  SAAS_BASIC
+  MARKETPLACE_MINI
+  ECOMMERCE_MINI
+  LANDING_BLOG
+}
+
+model TemplateMapping {
+  id                  String       @id @default(cuid())
+  projectId           String       @unique
+  recommendedTemplate TemplateType
+  confidence          Float        // 0-1
+  reasoning           String       @db.Text
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+
+// ============================================================================
+// BUILD ENGINE
+// ============================================================================
+
+enum BuildStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model BuildArtifact {
+  id                  String       @id @default(cuid())
+  projectId           String
+  templateType        TemplateType
+  status              BuildStatus  @default(PENDING)
+  zipPath             String?      // Path to generated ZIP file
+  buildLog            String?      @db.Text
+  errorMessage        String?      @db.Text
+  parameters          Json         // Build parameters (app name, branding, etc.)
+  qualityChecksPassed Boolean      @default(false)
+  createdAt           DateTime     @default(now())
+  completedAt         DateTime?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
 }

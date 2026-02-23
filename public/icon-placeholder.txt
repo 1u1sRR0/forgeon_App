@@ -1,0 +1,34 @@
+# PWA Icon Placeholders
+
+The following icon files need to be created:
+
+1. icon-192.png (192x192 pixels)
+   - App icon for Android and PWA
+   - Should contain the MVP Incubator logo
+   - Background: #3B82F6 (blue)
+   - Logo: White
+
+2. icon-512.png (512x512 pixels)
+   - High-resolution app icon
+   - Same design as 192x192
+   - Used for splash screens
+
+3. favicon.ico (32x32 pixels)
+   - Browser tab icon
+   - Simplified version of the logo
+
+4. screenshot-wide.png (1280x720 pixels)
+   - Desktop screenshot showing the dashboard
+   - For PWA install prompt
+
+5. screenshot-narrow.png (750x1334 pixels)
+   - Mobile screenshot showing the app
+   - For PWA install prompt
+
+For now, the app will work without these files, but they should be created for production deployment.
+
+To create these icons:
+1. Design a logo for MVP Incubator
+2. Use a tool like https://realfavicongenerator.net/
+3. Or use Figma/Photoshop to create the required sizes
+4. Place the files in the /public directory

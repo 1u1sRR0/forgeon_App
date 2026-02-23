@@ -4,8 +4,9 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/projects/[id] - Get project details
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -14,7 +15,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     const project = await prisma.project.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       select: {
         id: true,
@@ -43,8 +44,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PATCH /api/projects/[id] - Update project
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -53,7 +55,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const project = await prisma.project.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       select: {
         userId: true,
@@ -73,7 +75,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const updatedProject = await prisma.project.update({
       where: {
-        id: params.id,
+        id,
       },
       data: {
         ...(name !== undefined && { name: name.trim() }),
@@ -98,8 +100,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 }
 
 // DELETE /api/projects/[id] - Delete project
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
@@ -108,7 +111,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     const project = await prisma.project.findUnique({
       where: {
-        id: params.id,
+        id,
       },
       select: {
         userId: true,
@@ -125,7 +128,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     await prisma.project.delete({
       where: {
-        id: params.id,
+        id,
       },
     });
 

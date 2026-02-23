@@ -18,19 +18,28 @@ interface Project {
   updatedAt: string;
 }
 
-export default function ProjectOverviewPage({ params }: { params: { id: string } }) {
+export default function ProjectOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [projectId, setProjectId] = useState<string>('');
 
   useEffect(() => {
-    fetchProject();
-  }, [params.id]);
+    params.then((p) => {
+      setProjectId(p.id);
+    });
+  }, [params]);
+
+  useEffect(() => {
+    if (projectId) {
+      fetchProject();
+    }
+  }, [projectId]);
 
   const fetchProject = async () => {
     try {
-      const response = await fetch(`/api/projects/${params.id}`);
+      const response = await fetch(`/api/projects/${projectId}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -53,7 +62,7 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
     }
 
     try {
-      const response = await fetch(`/api/projects/${params.id}`, {
+      const response = await fetch(`/api/projects/${projectId}`, {
         method: 'DELETE',
       });
 
@@ -192,6 +201,54 @@ export default function ProjectOverviewPage({ params }: { params: { id: string }
           <div className="bg-white shadow rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
             <div className="flex flex-wrap gap-3">
+              {project.state === 'IDEA' && (
+                <Link
+                  href={`/dashboard/projects/${projectId}/wizard`}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+                >
+                  Start Wizard
+                </Link>
+              )}
+              {(project.state === 'IDEA' || project.state === 'STRUCTURED') && (
+                <Link
+                  href={`/dashboard/projects/${projectId}/wizard`}
+                  className="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 text-sm font-medium rounded-md hover:bg-blue-50"
+                >
+                  {project.state === 'IDEA' ? 'Start Wizard' : 'Edit Wizard'}
+                </Link>
+              )}
+              {project.state === 'STRUCTURED' && (
+                <Link
+                  href={`/dashboard/projects/${projectId}/evaluation`}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+                >
+                  Run Evaluation
+                </Link>
+              )}
+              {(project.state === 'VALIDATED' || project.state === 'BUILD_READY' || project.state === 'BLOCKED') && (
+                <Link
+                  href={`/dashboard/projects/${projectId}/evaluation`}
+                  className="inline-flex items-center px-4 py-2 border border-green-600 text-green-600 text-sm font-medium rounded-md hover:bg-green-50"
+                >
+                  View Evaluation
+                </Link>
+              )}
+              {project.state === 'BUILD_READY' && (
+                <Link
+                  href={`/dashboard/projects/${projectId}/build`}
+                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700"
+                >
+                  Generate MVP
+                </Link>
+              )}
+              {project.state === 'MVP_GENERATED' && (
+                <Link
+                  href={`/dashboard/projects/${projectId}/build/result`}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700"
+                >
+                  Download MVP
+                </Link>
+              )}
               <button
                 onClick={handleDelete}
                 className="inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50"
