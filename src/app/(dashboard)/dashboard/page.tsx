@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getStateBadgeClasses } from '@/modules/projects/stateMachine';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 interface Project {
   id: string;
@@ -114,7 +115,8 @@ export default function DashboardPage() {
           </div>
 
           {/* Projects List */}
-          {projects.length === 0 ? (
+          <SectionErrorBoundary sectionName="Projects List">
+            {projects.length === 0 ? (
             <div className="bg-white shadow rounded-lg p-12 text-center">
               <svg
                 className="mx-auto h-12 w-12 text-gray-400"
@@ -170,6 +172,7 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+          </SectionErrorBoundary>
         </div>
       </div>
     </div>

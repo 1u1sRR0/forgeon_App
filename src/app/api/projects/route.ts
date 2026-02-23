@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createErrorResponse } from '@/lib/apiErrors';
 
 // GET /api/projects - List user's projects
 export async function GET(request: Request) {
@@ -9,7 +10,7 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createErrorResponse(401, 'You must be logged in to view projects', 'UNAUTHORIZED');
     }
 
     const { searchParams } = new URL(request.url);
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Get projects error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return createErrorResponse(500, 'Failed to load projects. Please try again.', 'FETCH_PROJECTS_ERROR');
   }
 }
 
@@ -56,14 +57,18 @@ export async function POST(request: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createErrorResponse(401, 'You must be logged in to create a project', 'UNAUTHORIZED');
     }
 
     const body = await request.json();
     const { name, description } = body;
 
     if (!name || name.trim().length === 0) {
-      return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
+      return createErrorResponse(400, 'Project name is required', 'INVALID_NAME');
+    }
+
+    if (name.trim().length > 100) {
+      return createErrorResponse(400, 'Project name must be less than 100 characters', 'NAME_TOO_LONG');
     }
 
     const project = await prisma.project.create({
@@ -87,6 +92,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ project }, { status: 201 });
   } catch (error) {
     console.error('Create project error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return createErrorResponse(500, 'Failed to create project. Please try again.', 'CREATE_PROJECT_ERROR');
   }
 }
