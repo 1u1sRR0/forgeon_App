@@ -1,34 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { marketGapService } from '@/modules/marketGapEngine/marketGapService';
+import { MarketGapService } from '@/modules/marketGapEngine/marketGapService';
+
+const marketGapService = new MarketGapService();
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('q') || '';
-    const sector = searchParams.get('sector') || '';
-    const minViability = searchParams.get('minViability') ? parseInt(searchParams.get('minViability')!) : undefined;
-    const maxDifficulty = searchParams.get('maxDifficulty') || '';
-    const sort = searchParams.get('sort') || 'viability-desc';
+    const sector = searchParams.get('sector') || undefined;
+    const competitionLevel = searchParams.get('competitionLevel') as 'low' | 'medium' | 'high' | undefined;
+    const sortParam = searchParams.get('sort') || 'newest';
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = 12;
+    const pageSize = 12;
 
-    // Get market gaps from service
-    const result = await marketGapService.getMarketGaps({
-      query,
-      sector,
-      minViability,
-      maxDifficulty,
-      sort,
-      page,
-      limit,
-    });
+    // Map sort parameter
+    const sort = sortParam === 'competition-asc' ? 'competition' : 'newest';
+
+    // Get market gaps from service with auto-seeding
+    const result = await marketGapService.getMarketGapsWithAutoSeed(
+      session.user.id,
+      {
+        sector,
+        competitionLevel,
+        sort,
+        page,
+        pageSize,
+      }
+    );
 
     return NextResponse.json(result);
   } catch (error) {
