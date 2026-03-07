@@ -61,8 +61,8 @@ function LoginForm() {
         backgroundColor: '#1a1f2e',
       }}
     >
-      {/* Dark overlay - reduced opacity to show more background */}
-      <div className="fixed inset-0 bg-black/50 pointer-events-none z-0" />
+      {/* Dark overlay - matches landing page darkness */}
+      <div className="fixed inset-0 bg-black/85 pointer-events-none z-0" />
       
       <div className="max-w-md w-full relative z-10">
         {/* Glassmorphism Card - reduced background opacity to show more blur effect */}
