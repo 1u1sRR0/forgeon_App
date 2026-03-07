@@ -68,11 +68,11 @@ export default function Scene({
     'bottom-right': 'bottom-0 right-0',
   };
 
-  // Radial glow intensity mapping
+  // Radial glow intensity mapping - reduced significantly for subtle effect
   const glowIntensityClasses: Record<string, string> = {
-    low: 'w-96 h-96 opacity-20',
-    medium: 'w-[600px] h-[600px] opacity-30',
-    high: 'w-[800px] h-[800px] opacity-40',
+    low: 'w-96 h-96 opacity-10',
+    medium: 'w-[600px] h-[600px] opacity-15',
+    high: 'w-[800px] h-[800px] opacity-20',
   };
 
   return (
