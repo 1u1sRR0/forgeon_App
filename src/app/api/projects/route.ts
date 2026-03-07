@@ -1,97 +1,65 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { createErrorResponse } from '@/lib/apiErrors';
+import prisma from '@/lib/prisma';
 
-// GET /api/projects - List user's projects
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
-      return createErrorResponse(401, 'You must be logged in to view projects', 'UNAUTHORIZED');
-    }
-
-    const { searchParams } = new URL(request.url);
-    const sort = searchParams.get('sort') || 'createdAt';
-    const order = searchParams.get('order') || 'desc';
-    const state = searchParams.get('state');
-
-    const where: any = {
-      userId: session.user.id,
-    };
-
-    if (state) {
-      where.state = state;
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const projects = await prisma.project.findMany({
-      where,
-      orderBy: {
-        [sort]: order,
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        state: true,
-        createdAt: true,
-        updatedAt: true,
+      where: { userId: session.user.id },
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        viabilityScores: {
+          orderBy: { computedAt: 'desc' },
+          take: 1,
+        },
       },
     });
 
-    return NextResponse.json({
-      projects,
-      total: projects.length,
-    });
+    return NextResponse.json(projects);
   } catch (error) {
-    console.error('Get projects error:', error);
-    return createErrorResponse(500, 'Failed to load projects. Please try again.', 'FETCH_PROJECTS_ERROR');
+    console.error('Error fetching projects:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch projects' },
+      { status: 500 }
+    );
   }
 }
 
-// POST /api/projects - Create new project
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
-      return createErrorResponse(401, 'You must be logged in to create a project', 'UNAUTHORIZED');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { name, description } = body;
 
-    if (!name || name.trim().length === 0) {
-      return createErrorResponse(400, 'Project name is required', 'INVALID_NAME');
-    }
-
-    if (name.trim().length > 100) {
-      return createErrorResponse(400, 'Project name must be less than 100 characters', 'NAME_TOO_LONG');
+    if (!name) {
+      return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
     const project = await prisma.project.create({
       data: {
-        name: name.trim(),
-        description: description?.trim() || null,
         userId: session.user.id,
+        name,
+        description: description || '',
         state: 'IDEA',
-      },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        state: true,
-        userId: true,
-        createdAt: true,
-        updatedAt: true,
       },
     });
 
-    return NextResponse.json({ project }, { status: 201 });
+    return NextResponse.json(project);
   } catch (error) {
-    console.error('Create project error:', error);
-    return createErrorResponse(500, 'Failed to create project. Please try again.', 'CREATE_PROJECT_ERROR');
+    console.error('Error creating project:', error);
+    return NextResponse.json(
+      { error: 'Failed to create project' },
+      { status: 500 }
+    );
   }
 }

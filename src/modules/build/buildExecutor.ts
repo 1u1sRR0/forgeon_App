@@ -235,6 +235,12 @@ export class BuildExecutor {
       });
       
       this.log('Project state updated to MVP_GENERATED');
+
+      // Trigger course generation (non-blocking)
+      this.log('Triggering course generation...');
+      this.generateCourseAsync(this.projectId).catch((err) => {
+        console.error('Course generation failed (non-blocking):', err);
+      });
     } catch (error: any) {
       this.log(`Build failed: ${error.message}`);
       console.error('Build error:', error);
@@ -306,5 +312,23 @@ export default function RootLayout({
   );
 }
 `;
+  }
+
+  /**
+   * Generate course asynchronously (non-blocking)
+   */
+  private async generateCourseAsync(projectId: string): Promise<void> {
+    try {
+      const { generateCourse } = await import('@/modules/courseEngine/courseGenerator');
+      
+      this.log('Generating course...');
+      await generateCourse(projectId);
+      
+      this.log('Course generation completed successfully');
+    } catch (error: any) {
+      // Log error but don't fail the build
+      this.log(`Course generation failed: ${error.message}`);
+      console.error('Course generation error:', error);
+    }
   }
 }

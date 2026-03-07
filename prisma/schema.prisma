@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ============================================================================
@@ -26,9 +27,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  projects Project[]
+  accounts       Account[]
+  sessions       Session[]
+  projects       Project[]
+  lessonProgress LessonProgress[]
+  quizAttempts   QuizAttempt[]
 
   @@index([email])
 }
@@ -102,6 +105,7 @@ model Project {
   artifacts          GeneratedArtifact[]
   templateMapping    TemplateMapping?
   buildArtifacts     BuildArtifact[]
+  course             Course?
 
   @@index([userId])
   @@index([state])
@@ -317,4 +321,292 @@ model BuildArtifact {
 
   @@index([projectId])
   @@index([status])
+}
+
+// ============================================================================
+// COURSE SYSTEM (Learn 2.0)
+// ============================================================================
+
+model Course {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  title       String
+  description String   @db.Text
+  metadata    Json     // Course-level metadata (tech stack, business model, etc.)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  levels  CourseLevel[]
+
+  @@index([projectId])
+}
+
+model CourseLevel {
+  id          String   @id @default(cuid())
+  courseId    String
+  levelNumber Int      // 1-6
+  title       String
+  description String   @db.Text
+  objectives  Json     // Array of learning objectives
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+  quizzes Quiz[]
+
+  @@unique([courseId, levelNumber])
+  @@index([courseId])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  levelId     String
+  lessonNumber Int     // Order within level
+  title       String
+  description String   @db.Text
+  content     Json     // Array of content blocks
+  estimatedMinutes Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  level    CourseLevel      @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@unique([levelId, lessonNumber])
+  @@index([levelId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  completed   Boolean   @default(false)
+  timeSpent   Int?      // Minutes spent on lesson
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}
+
+model Quiz {
+  id          String   @id @default(cuid())
+  levelId     String
+  title       String
+  description String   @db.Text
+  questions   Json     // Array of quiz questions with options
+  passingScore Int     @default(70) // Percentage required to pass
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  level    CourseLevel   @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  attempts QuizAttempt[]
+
+  @@index([levelId])
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  quizId      String
+  answers     Json     // Array of user answers
+  score       Int      // Percentage score
+  passed      Boolean
+  completedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quizId])
+  @@index([completedAt])
+}
+
+model GlossaryTerm {
+  id         String   @id @default(cuid())
+  courseId   String
+  term       String
+  definition String   @db.Text
+  category   String   // business, technical, legal, marketing
+  relatedTerms Json?  // Array of related term IDs
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([courseId])
+  @@index([category])
+}
+
+// ============================================================================
+// OPPORTUNITIES & MARKET INTELLIGENCE
+// ============================================================================
+
+model Opportunity {
+  id                     String   @id @default(cuid())
+  userId                 String
+  title                  String
+  hook                   String   @db.Text
+  category               String
+  sector                 String
+  problemStatement       String   @db.Text
+  targetAudience         String   @db.Text
+  buyerPersona           String?  @db.Text
+  painLevel              Int?     // 1-10
+  solutionOverview       String   @db.Text
+  mvpScope               String?  @db.Text
+  coreFeatures           Json     // Array of strings
+  demandScore            Int      // 0-100
+  demandSignals          Json     // Array of {source, signal, strength}
+  competitionScore       Int      // 0-100
+  competitionSnapshot    String?  @db.Text
+  differentiationAngles  Json?    // Array of strings
+  pricingSuggestions     String?  @db.Text
+  pricingRationale       String?  @db.Text
+  monetizationType       String?  // subscription, one-time, freemium, usage-based, marketplace
+  timingSignals          Json?    // Array of strings
+  gtmChannels            Json?    // Array of strings
+  risks                  Json?    // Array of strings
+  mitigations            Json?    // Array of strings
+  executionDifficulty    Int?     // 1-5
+  executionReasons       Json?    // Array of strings
+  timeToMVP              String?
+  requiredSkills         Json?    // Array of strings
+  recommendedStack       Json?    // Array of strings
+  acceptanceCriteria     Json?    // Array of strings
+  nextSteps              Json?    // Array of strings
+  viabilityScore         Float?   // Computed score
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  projectLinks OpportunityProjectLink[]
+
+  @@index([userId])
+  @@index([sector])
+  @@index([viabilityScore])
+  @@index([createdAt])
+}
+
+model OpportunityProjectLink {
+  id            String   @id @default(cuid())
+  opportunityId String
+  projectId     String
+  wizardSeed    Json?    // Pre-filled wizard data
+  createdAt     DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([opportunityId, projectId])
+  @@index([projectId])
+}
+
+model MarketGap {
+  id                  String   @id @default(cuid())
+  userId              String
+  title               String
+  sector              String
+  underservedSegment  String   @db.Text
+  competitionLevel    String   // low, medium, high
+  gapDescription      String   @db.Text
+  evidence            Json     // Array of {signal, strength, source}
+  wedgeStrategy       String   @db.Text
+  estimatedMarketSize String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  variants      MarketGapVariant[]
+  projectLinks  MarketGapProjectLink[]
+
+  @@index([userId])
+  @@index([sector])
+  @@index([competitionLevel])
+  @@index([createdAt])
+}
+
+model MarketGapVariant {
+  id                String   @id @default(cuid())
+  marketGapId       String
+  approach          String   // Premium, Volume, Niche
+  title             String
+  targetSubSegment  String   @db.Text
+  differentiator    String   @db.Text
+  fullDossier       Json     // Complete BusinessIntelligenceDossier
+  createdAt         DateTime @default(now())
+
+  marketGap     MarketGap              @relation(fields: [marketGapId], references: [id], onDelete: Cascade)
+  projectLinks  MarketGapProjectLink[]
+
+  @@index([marketGapId])
+}
+
+model MarketGapProjectLink {
+  id                  String   @id @default(cuid())
+  projectId           String
+  marketGapId         String
+  marketGapVariantId  String
+  wizardSeed          Json?    // Pre-filled wizard data
+  createdAt           DateTime @default(now())
+
+  marketGap MarketGap          @relation(fields: [marketGapId], references: [id], onDelete: Cascade)
+  variant   MarketGapVariant   @relation(fields: [marketGapVariantId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, marketGapVariantId])
+  @@index([projectId])
+  @@index([marketGapId])
+}
+
+// ============================================================================
+// AI ASSISTANT
+// ============================================================================
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String   @default("New Conversation")
+  projectId String?  // Optional project context
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([updatedAt])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String   // user, assistant, system
+  content        String   @db.Text
+  metadata       Json?    // Additional context (project data, etc.)
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// LEARN TASKS (for progress tracking)
+// ============================================================================
+
+model LearnTask {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  description String?  @db.Text
+  completed   Boolean  @default(false)
+  order       Int      // Display order
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([completed])
 }
