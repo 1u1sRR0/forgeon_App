@@ -2,13 +2,7 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { authOptions } from '@/lib/auth';
 import Sidebar from '@/components/layout/Sidebar';
-import dynamic from 'next/dynamic';
-
-// Dynamically import client component to avoid SSR issues
-const FloatingAssistantWidget = dynamic(
-  () => import('@/components/assistant/FloatingAssistantWidget'),
-  { ssr: false }
-);
+import DashboardClientWrapper from '@/components/layout/DashboardClientWrapper';
 
 export default async function DashboardLayout({
   children,
@@ -25,7 +19,7 @@ export default async function DashboardLayout({
     <div className="flex h-screen bg-gray-950">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">{children}</main>
-      <FloatingAssistantWidget />
+      <DashboardClientWrapper />
     </div>
   );
 }
