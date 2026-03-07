@@ -17,9 +17,11 @@ export default function DashboardPage() {
     try {
       const response = await fetch('/api/projects');
       const data = await response.json();
-      setProjects(data);
+      // Ensure data is always an array
+      setProjects(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching projects:', error);
+      setProjects([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
