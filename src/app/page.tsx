@@ -83,15 +83,17 @@ export default function Home() {
         backgroundColor: '#000',
       }}
     >
+      {/* Global dark overlay for background opacity */}
+      <div className="fixed inset-0 bg-black/60 pointer-events-none z-0" />
       {/* Navbar */}
       <PremiumNavbar activeSection={activeSection} />
 
       {/* Scene 1: Hero */}
       <Scene
         id="hero"
-        gradient={{ from: 'from-black/60', to: 'to-black/30', direction: 'to-b' }}
-        radialGlow={{ color: 'blue-500', position: 'center', intensity: 'high' }}
-        noiseTexture={true}
+        gradient={{ from: 'from-black/40', to: 'to-black/20', direction: 'to-b' }}
+        radialGlow={{ color: 'blue-500', position: 'center', intensity: 'medium' }}
+        noiseTexture={false}
       >
         <div className="flex items-center justify-center min-h-screen px-4">
           <div className="max-w-4xl mx-auto text-center">
@@ -109,11 +111,12 @@ export default function Home() {
                 href="/register"
                 className="
                   group px-8 py-4 rounded-lg
-                  bg-gradient-to-r from-blue-500 to-purple-600
+                  bg-white/10 backdrop-blur-md
+                  border border-white/20
                   text-white text-lg font-semibold
-                  hover:from-blue-600 hover:to-purple-700
+                  hover:bg-white/20
                   transition-all duration-200
-                  shadow-2xl shadow-blue-500/50
+                  shadow-2xl
                   flex items-center justify-center gap-2
                 "
               >
@@ -124,10 +127,10 @@ export default function Home() {
                 href="/login"
                 className="
                   px-8 py-4 rounded-lg
-                  bg-white/10 backdrop-blur-md
-                  border border-white/20
+                  bg-white/5 backdrop-blur-md
+                  border border-white/10
                   text-white text-lg font-semibold
-                  hover:bg-white/20
+                  hover:bg-white/10
                   transition-all duration-200
                 "
               >
@@ -141,8 +144,8 @@ export default function Home() {
       {/* Scene 2: Features */}
       <Scene
         id="features"
-        gradient={{ from: 'from-black/70', to: 'to-black/50', direction: 'to-b' }}
-        radialGlow={{ color: 'purple-500', position: 'top-right', intensity: 'medium' }}
+        gradient={{ from: 'from-black/50', to: 'to-black/30', direction: 'to-b' }}
+        radialGlow={{ color: 'purple-500', position: 'top-right', intensity: 'low' }}
       >
         <div className="flex items-center justify-center min-h-screen px-4 py-20">
           <div className="max-w-6xl mx-auto">
@@ -166,7 +169,7 @@ export default function Home() {
       {/* Scene 3: About */}
       <Scene
         id="about"
-        gradient={{ from: 'from-black/50', to: 'to-black/30', direction: 'to-b' }}
+        gradient={{ from: 'from-black/40', to: 'to-black/20', direction: 'to-b' }}
         radialGlow={{ color: 'blue-400', position: 'bottom-left', intensity: 'low' }}
       >
         <div className="flex items-center justify-center min-h-screen px-4 py-20">
@@ -189,7 +192,7 @@ export default function Home() {
       {/* Scene 4: FAQ */}
       <Scene
         id="faq"
-        gradient={{ from: 'from-black/60', to: 'to-black/40', direction: 'to-b' }}
+        gradient={{ from: 'from-black/40', to: 'to-black/20', direction: 'to-b' }}
       >
         <div className="flex items-center justify-center min-h-screen px-4 py-20">
           <div className="max-w-4xl mx-auto w-full">
@@ -206,14 +209,24 @@ export default function Home() {
         </div>
       </Scene>
 
-      {/* Scene 5: Final CTA */}
-      <Scene
+      {/* Scene 5: Final CTA with custom background */}
+      <section
         id="cta"
-        gradient={{ from: 'from-black/70', to: 'to-black/50', direction: 'to-b' }}
-        radialGlow={{ color: 'blue-600', position: 'center', intensity: 'high' }}
-        noiseTexture={true}
+        className="relative min-h-screen w-full overflow-hidden"
+        style={{
+          backgroundImage: 'url(/fondo_start_now.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
       >
-        <div className="flex items-center justify-center min-h-screen px-4">
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-black/70 pointer-events-none" />
+        
+        {/* Radial glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600 blur-3xl rounded-full opacity-30 pointer-events-none" />
+        
+        {/* Content */}
+        <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
               Ready to Validate Your Idea?
@@ -226,11 +239,12 @@ export default function Home() {
               className="
                 inline-flex items-center gap-3
                 px-10 py-5 rounded-lg
-                bg-gradient-to-r from-blue-500 to-purple-600
+                bg-white/10 backdrop-blur-md
+                border border-white/20
                 text-white text-xl font-bold
-                hover:from-blue-600 hover:to-purple-700
+                hover:bg-white/20
                 transition-all duration-200
-                shadow-2xl shadow-blue-500/50
+                shadow-2xl
                 hover:scale-105
               "
             >
@@ -242,7 +256,7 @@ export default function Home() {
             </p>
           </div>
         </div>
-      </Scene>
+      </section>
     </div>
   );
 }

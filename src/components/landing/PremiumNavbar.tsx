@@ -48,7 +48,7 @@ export default function PremiumNavbar({ activeSection, onNavigate }: PremiumNavb
       className={`
         fixed top-0 left-0 right-0 z-50
         transition-all duration-300
-        ${isScrolled ? 'bg-black/20 backdrop-blur-md border-b border-white/10' : 'bg-transparent'}
+        ${isScrolled ? 'bg-black/30 backdrop-blur-xl border-b border-white/10 shadow-lg' : 'bg-transparent'}
       `}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -69,10 +69,7 @@ export default function PremiumNavbar({ activeSection, onNavigate }: PremiumNavb
             )}
           </div>
 
-          {/* Center - App Name */}
-          <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2">
-            <span className="text-white font-semibold text-xl">Forgeon</span>
-          </div>
+          {/* Center - App Name - REMOVED per user request */}
 
           {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center gap-8">
