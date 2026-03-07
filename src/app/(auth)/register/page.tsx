@@ -147,7 +147,7 @@ export default function RegisterPage() {
               <div className="w-full border-t border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-[#0f1419] text-white/60">
+              <span className="px-4 bg-white/10 text-white/60">
                 Or continue with email
               </span>
             </div>

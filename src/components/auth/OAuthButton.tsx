@@ -30,7 +30,7 @@ export default function OAuthButton({ provider, label, icon, disabled = false }:
       type="button"
       onClick={handleClick}
       disabled={disabled || loading}
-      className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-[#0f1419] disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#1a1f2e] hover:bg-[#252b3d] border border-white/10 rounded-lg text-white font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed"
       aria-label={label}
     >
       {loading ? (

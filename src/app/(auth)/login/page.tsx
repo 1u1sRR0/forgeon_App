@@ -81,7 +81,7 @@ function LoginForm() {
           {/* Heading */}
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white mb-2">
-              Welcome back
+              Sign in
             </h2>
             <p className="text-white/60">
               Continue validating your business ideas
@@ -142,7 +142,7 @@ function LoginForm() {
               <div className="w-full border-t border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-[#0f1419] text-white/60">
+              <span className="px-4 bg-white/10 text-white/60">
                 Or continue with email
               </span>
             </div>
