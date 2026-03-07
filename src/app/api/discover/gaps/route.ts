@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { opportunityService } from '@/modules/opportunityEngine/opportunityService';
+import { marketGapService } from '@/modules/marketGapEngine/marketGapService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,18 +15,16 @@ export async function GET(request: NextRequest) {
     const sector = searchParams.get('sector') || '';
     const minViability = searchParams.get('minViability') ? parseInt(searchParams.get('minViability')!) : undefined;
     const maxDifficulty = searchParams.get('maxDifficulty') || '';
-    const monetizationType = searchParams.get('monetizationType') || '';
     const sort = searchParams.get('sort') || 'viability-desc';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = 12;
 
-    // Get opportunities from service
-    const result = await opportunityService.getOpportunities({
+    // Get market gaps from service
+    const result = await marketGapService.getMarketGaps({
       query,
       sector,
       minViability,
       maxDifficulty,
-      monetizationType,
       sort,
       page,
       limit,
@@ -34,9 +32,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Error fetching opportunities:', error);
+    console.error('Error fetching market gaps:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch opportunities' },
+      { error: 'Failed to fetch market gaps' },
       { status: 500 }
     );
   }
