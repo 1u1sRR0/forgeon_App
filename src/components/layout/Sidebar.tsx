@@ -44,9 +44,9 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-64 bg-gray-900 border-r border-gray-700 flex flex-col h-screen">
+    <div className="w-64 bg-gray-900 flex flex-col h-screen">
       {/* Logo */}
-      <div className="p-6 border-b border-gray-700">
+      <div className="p-6">
         <h1 className="text-2xl font-bold text-white">Forgeon</h1>
       </div>
 
@@ -108,7 +108,7 @@ export default function Sidebar() {
       </nav>
 
       {/* User Menu */}
-      <div className="p-4 border-t border-gray-700 space-y-2">
+      <div className="p-4 space-y-2">
         <button
           onClick={() => router.push('/dashboard/profile')}
           className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-all"

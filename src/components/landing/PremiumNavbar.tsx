@@ -71,8 +71,8 @@ export default function PremiumNavbar({ activeSection, onNavigate }: PremiumNavb
 
           {/* Center - App Name - REMOVED per user request */}
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* Desktop Navigation Links - Centered */}
+          <div className="hidden md:flex items-center justify-center gap-8 flex-1">
             {navLinks.map((link) => (
               <button
                 key={link.id}

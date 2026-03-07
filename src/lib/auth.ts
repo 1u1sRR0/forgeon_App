@@ -1,13 +1,29 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
+import GitHubProvider from 'next-auth/providers/github';
+import AppleProvider from 'next-auth/providers/apple';
 import { PrismaAdapter } from '@auth/prisma-adapter';
-import { PrismaClient } from '@prisma/client';
 import { prisma } from './prisma';
 import bcrypt from 'bcrypt';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
+    // OAuth Providers
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
+    }),
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+    }),
+    AppleProvider({
+      clientId: process.env.APPLE_CLIENT_ID || '',
+      clientSecret: process.env.APPLE_CLIENT_SECRET || '',
+    }),
+    // Credentials Provider (existing)
     CredentialsProvider({
       name: 'credentials',
       credentials: {

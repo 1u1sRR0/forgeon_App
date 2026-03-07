@@ -83,8 +83,8 @@ export default function Home() {
         backgroundColor: '#000',
       }}
     >
-      {/* Global dark overlay for background - increased to 70% for darker look */}
-      <div className="fixed inset-0 bg-black/70 pointer-events-none z-0" />
+      {/* Global dark overlay for background - increased to 85% for darker look */}
+      <div className="fixed inset-0 bg-black/85 pointer-events-none z-0" />
       {/* Navbar */}
       <PremiumNavbar activeSection={activeSection} />
 
