@@ -83,8 +83,8 @@ export default function Home() {
         backgroundColor: '#000',
       }}
     >
-      {/* Global dark overlay for background opacity - reduced to 50% */}
-      <div className="fixed inset-0 bg-black/50 pointer-events-none z-0" />
+      {/* Global dark overlay for background - increased to 70% for darker look */}
+      <div className="fixed inset-0 bg-black/70 pointer-events-none z-0" />
       {/* Navbar */}
       <PremiumNavbar activeSection={activeSection} />
 
@@ -222,8 +222,8 @@ export default function Home() {
         {/* Dark overlay for readability */}
         <div className="absolute inset-0 bg-black/70 pointer-events-none" />
         
-        {/* Radial glow - very subtle */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600 blur-3xl rounded-full opacity-15 pointer-events-none" />
+        {/* Radial glow - minimal */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600 blur-3xl rounded-full opacity-8 pointer-events-none" />
         
         {/* Content */}
         <div className="relative z-10 flex items-center justify-center min-h-screen px-4">

@@ -53,19 +53,19 @@ export default function PremiumNavbar({ activeSection, onNavigate }: PremiumNavb
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo - Made larger */}
+          {/* Logo - Made much larger */}
           <div className="flex items-center gap-3">
             {!logoError ? (
               <Image
                 src="/logo_forgeon.png"
                 alt="Forgeon"
-                width={56}
-                height={56}
+                width={72}
+                height={72}
                 className="object-contain"
                 onError={() => setLogoError(true)}
               />
             ) : (
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg" />
+              <div className="w-18 h-18 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg" />
             )}
           </div>
 
