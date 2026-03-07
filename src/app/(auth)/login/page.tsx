@@ -58,15 +58,15 @@ function LoginForm() {
         backgroundAttachment: 'fixed',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        backgroundColor: '#0f1419',
+        backgroundColor: '#1a1f2e',
       }}
     >
-      {/* Dark overlay matching landing page */}
-      <div className="fixed inset-0 bg-black/70 pointer-events-none z-0" />
+      {/* Dark overlay - reduced opacity to show more background */}
+      <div className="fixed inset-0 bg-black/50 pointer-events-none z-0" />
       
       <div className="max-w-md w-full relative z-10">
-        {/* Glassmorphism Card with increased blur */}
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl p-8 md:p-12">
+        {/* Glassmorphism Card - reduced background opacity to show more blur effect */}
+        <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl p-8 md:p-12">
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <Image
@@ -142,7 +142,7 @@ function LoginForm() {
               <div className="w-full border-t border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white/10 text-white/60">
+              <span className="px-4 bg-[#1a1f2e]/80 text-white/60">
                 Or continue with email
               </span>
             </div>
