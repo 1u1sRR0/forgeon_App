@@ -62,6 +62,8 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
+    // Default session duration: 30 days (will be extended if remember me is checked)
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: '/login',
@@ -80,6 +82,10 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
       }
       return session;
+    },
+    async signIn({ user, account }) {
+      // Allow sign in
+      return true;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

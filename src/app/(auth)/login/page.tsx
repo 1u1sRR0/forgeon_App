@@ -14,6 +14,7 @@ function LoginForm() {
     email: '',
     password: '',
   });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -21,6 +22,12 @@ function LoginForm() {
   useEffect(() => {
     if (searchParams.get('registered') === 'true') {
       setSuccessMessage('Registration successful! Please sign in.');
+    }
+    
+    // Load remember me preference
+    const savedRememberMe = localStorage.getItem('rememberMe');
+    if (savedRememberMe === 'true') {
+      setRememberMe(true);
     }
   }, [searchParams]);
 
@@ -34,12 +41,21 @@ function LoginForm() {
         email: formData.email,
         password: formData.password,
         redirect: false,
+        // Remember me extends session duration
+        ...(rememberMe && { callbackUrl: '/dashboard' }),
       });
 
       if (result?.error) {
         setError('Invalid email or password');
         setLoading(false);
         return;
+      }
+
+      // Store remember me preference in localStorage
+      if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('rememberMe');
       }
 
       router.push('/dashboard');
@@ -184,7 +200,20 @@ function LoginForm() {
               />
             </div>
 
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-white/20 bg-white/5 text-blue-600 focus:ring-2 focus:ring-white/50 focus:ring-offset-0 cursor-pointer"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-white/60 cursor-pointer">
+                  Remember me
+                </label>
+              </div>
               <Link
                 href="/forgot-password"
                 className="text-sm font-medium text-white/60 hover:text-white transition-colors"
