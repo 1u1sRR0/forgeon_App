@@ -1,10 +1,13 @@
 import prisma from '@/lib/prisma';
+import crypto from 'crypto';
 
 export async function createConversation(userId: string, title?: string) {
   return await prisma.conversation.create({
     data: {
+      id: crypto.randomUUID(),
       userId,
       title: title || 'New Conversation',
+      updatedAt: new Date(),
     },
   });
 }
@@ -14,12 +17,12 @@ export async function getUserConversations(userId: string) {
     where: { userId },
     orderBy: { updatedAt: 'desc' },
     include: {
-      messages: {
+      Message: {
         orderBy: { createdAt: 'desc' },
         take: 1,
       },
       _count: {
-        select: { messages: true },
+        select: { Message: true },
       },
     },
   });
@@ -27,16 +30,9 @@ export async function getUserConversations(userId: string) {
 
 export async function getConversation(conversationId: string, userId: string) {
   const conversation = await prisma.conversation.findFirst({
-    where: {
-      id: conversationId,
-      userId,
-    },
+    where: { id: conversationId, userId },
   });
-
-  if (!conversation) {
-    throw new Error('Conversation not found');
-  }
-
+  if (!conversation) throw new Error('Conversation not found');
   return conversation;
 }
 
@@ -45,25 +41,20 @@ export async function updateConversationTitle(
   userId: string,
   title: string
 ) {
-  await getConversation(conversationId, userId); // Check ownership
-
+  await getConversation(conversationId, userId);
   return await prisma.conversation.update({
     where: { id: conversationId },
-    data: { title },
+    data: { title, updatedAt: new Date() },
   });
 }
 
 export async function deleteConversation(conversationId: string, userId: string) {
-  await getConversation(conversationId, userId); // Check ownership
-
-  await prisma.conversation.delete({
-    where: { id: conversationId },
-  });
+  await getConversation(conversationId, userId);
+  await prisma.conversation.delete({ where: { id: conversationId } });
 }
 
 export async function getConversationMessages(conversationId: string, userId: string) {
-  await getConversation(conversationId, userId); // Check ownership
-
+  await getConversation(conversationId, userId);
   return await prisma.message.findMany({
     where: { conversationId },
     orderBy: { createdAt: 'asc' },
@@ -78,6 +69,7 @@ export async function saveMessage(
 ) {
   const message = await prisma.message.create({
     data: {
+      id: crypto.randomUUID(),
       conversationId,
       role,
       content,
@@ -85,7 +77,6 @@ export async function saveMessage(
     },
   });
 
-  // Update conversation timestamp
   await prisma.conversation.update({
     where: { id: conversationId },
     data: { updatedAt: new Date() },
@@ -97,7 +88,7 @@ export async function saveMessage(
 export async function getConversationHistory(conversationId: string, limit: number = 20) {
   return await prisma.message.findMany({
     where: { conversationId },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: 'asc' },
     take: limit,
   });
 }

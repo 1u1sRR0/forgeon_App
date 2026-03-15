@@ -7,6 +7,7 @@ export interface UserContext {
   projects: Array<{
     id: string;
     name: string;
+    description: string | null;
     state: string;
     viabilityScore?: number;
   }>;
@@ -17,21 +18,13 @@ export interface UserContext {
 }
 
 export async function buildUserContext(userId: string): Promise<UserContext> {
-  // Load user profile
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-    },
+    select: { id: true, name: true, email: true },
   });
 
-  if (!user) {
-    throw new Error('User not found');
-  }
+  if (!user) throw new Error('User not found');
 
-  // Load user projects (limit 10 most recent)
   const projects = await prisma.project.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
@@ -39,39 +32,31 @@ export async function buildUserContext(userId: string): Promise<UserContext> {
     select: {
       id: true,
       name: true,
+      description: true,
       state: true,
-      viabilityScores: {
-        orderBy: { computedAt: 'desc' },
+      ViabilityScore: {
         take: 1,
-        select: {
-          totalScore: true,
-        },
+        select: { totalScore: true },
       },
     },
   });
 
-  // Calculate stats
   const totalProjects = await prisma.project.count({ where: { userId } });
   const completedProjects = await prisma.project.count({
-    where: {
-      userId,
-      state: { in: ['BUILD_READY', 'MVP_GENERATED'] },
-    },
+    where: { userId, state: { in: ['BUILD_READY', 'MVP_GENERATED'] } },
   });
 
   return {
     userId: user.id,
     userName: user.name,
     email: user.email,
-    projects: projects.map((p) => ({
+    projects: projects.map((p: any) => ({
       id: p.id,
       name: p.name,
+      description: p.description,
       state: p.state,
-      viabilityScore: p.viabilityScores[0]?.totalScore,
+      viabilityScore: p.ViabilityScore?.[0]?.totalScore,
     })),
-    stats: {
-      totalProjects,
-      completedProjects,
-    },
+    stats: { totalProjects, completedProjects },
   };
 }

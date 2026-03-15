@@ -14,7 +14,6 @@ export async function GET(
     }
 
     const { id } = await params;
-
     const messages = await getConversationMessages(id, session.user.id);
 
     return NextResponse.json(messages);
