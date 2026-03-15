@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { UserContext } from './userContextBuilder';
 
 export interface AssistantProvider {
@@ -9,55 +10,15 @@ export interface AssistantProvider {
   ): Promise<string>;
 }
 
-// Real OpenAI provider
-export class OpenAIProvider implements AssistantProvider {
-  private client: OpenAI;
-  private model: string;
+function buildSystemPrompt(context: UserContext): string {
+  const userName = context.userName || 'the user';
+  const projectsSummary = context.projects.length > 0
+    ? context.projects.map((p) =>
+        `- "${p.name}" (${p.state})${p.viabilityScore ? ` — viability: ${p.viabilityScore}/100` : ''}`
+      ).join('\n')
+    : 'No projects yet.';
 
-  constructor() {
-    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    this.model = process.env.ASSISTANT_MODEL || 'gpt-4o-mini';
-  }
-
-  async generateResponse(
-    context: UserContext,
-    message: string,
-    history: Array<{ role: string; content: string }>
-  ): Promise<string> {
-    const systemPrompt = this.buildSystemPrompt(context);
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt },
-      ...history.map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content,
-      })),
-      { role: 'user', content: message },
-    ];
-
-    try {
-      const response = await this.client.chat.completions.create({
-        model: this.model,
-        messages,
-        max_tokens: 2048,
-        temperature: 0.7,
-      });
-      return response.choices[0]?.message?.content || 'No response generated.';
-    } catch (error: unknown) {
-      console.error('OpenAI API error:', error);
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      return `Sorry, I encountered an error connecting to OpenAI: ${msg}. Please try again.`;
-    }
-  }
-
-  private buildSystemPrompt(context: UserContext): string {
-    const userName = context.userName || 'the user';
-    const projectsSummary = context.projects.length > 0
-      ? context.projects.map((p) =>
-          `- "${p.name}" (${p.state})${p.viabilityScore ? ` — viability: ${p.viabilityScore}/100` : ''}`
-        ).join('\n')
-      : 'No projects yet.';
-
-    return `You are the Forgeon Assistant — a startup CTO, product strategist, and Forgeon platform expert.
+  return `You are the Forgeon Assistant — a startup CTO, product strategist, and Forgeon platform expert.
 
 You are chatting with ${userName}. Be helpful, direct, and technical when needed. You can answer ANY question freely — about startups, technology, business, coding, or anything else. Prioritize Forgeon context when relevant but don't restrict yourself to it.
 
@@ -86,10 +47,87 @@ BEHAVIOR:
 - Give actionable advice
 - Don't be overly verbose
 - You can answer anything — coding, business, life, whatever they ask`;
+}
+
+// ─── Gemini Provider (FREE) ───
+export class GeminiProvider implements AssistantProvider {
+  private genAI: GoogleGenerativeAI;
+  private modelName: string;
+
+  constructor() {
+    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  }
+
+  async generateResponse(
+    context: UserContext,
+    message: string,
+    history: Array<{ role: string; content: string }>
+  ): Promise<string> {
+    try {
+      const model = this.genAI.getGenerativeModel({
+        model: this.modelName,
+        systemInstruction: buildSystemPrompt(context),
+      });
+
+      const chat = model.startChat({
+        history: history.map((m) => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }],
+        })),
+      });
+
+      const result = await chat.sendMessage(message);
+      return result.response.text() || 'No response generated.';
+    } catch (error: unknown) {
+      console.error('Gemini API error:', error);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      return `Sorry, I encountered an error with Gemini: ${msg}. Please try again.`;
+    }
   }
 }
 
-// Fallback mock provider (used when no OpenAI key)
+// ─── OpenAI Provider ───
+export class OpenAIProvider implements AssistantProvider {
+  private client: OpenAI;
+  private model: string;
+
+  constructor() {
+    this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.model = process.env.ASSISTANT_MODEL || 'gpt-4o-mini';
+  }
+
+  async generateResponse(
+    context: UserContext,
+    message: string,
+    history: Array<{ role: string; content: string }>
+  ): Promise<string> {
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: buildSystemPrompt(context) },
+      ...history.map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      })),
+      { role: 'user', content: message },
+    ];
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: this.model,
+        messages,
+        max_tokens: 2048,
+        temperature: 0.7,
+      });
+      return response.choices[0]?.message?.content || 'No response generated.';
+    } catch (error: unknown) {
+      console.error('OpenAI API error:', error);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      return `Sorry, I encountered an error with OpenAI: ${msg}. Please try again.`;
+    }
+  }
+}
+
+// ─── Mock Provider (fallback) ───
 export class MockAssistantProvider implements AssistantProvider {
   async generateResponse(
     context: UserContext,
@@ -101,54 +139,41 @@ export class MockAssistantProvider implements AssistantProvider {
     const projects = context.projects;
 
     if (msg.match(/^(hi|hello|hey|hola|buenas|que tal)/)) {
-      const projectInfo = projects.length > 0
-        ? `You have ${projects.length} project${projects.length > 1 ? 's' : ''} in Forgeon. Want me to help with any of them?`
-        : `Looks like you haven't created any projects yet. Want me to help you get started?`;
-      return `Hey ${userName}! I'm your Forgeon assistant — think of me as your startup CTO + product strategist. ${projectInfo}`;
+      const info = projects.length > 0
+        ? `You have ${projects.length} project${projects.length > 1 ? 's' : ''} in Forgeon.`
+        : `You haven't created any projects yet.`;
+      return `Hey ${userName}! I'm your Forgeon assistant. ${info} What can I help with?`;
     }
 
     if (msg.includes('project') || msg.includes('proyecto')) {
-      if (projects.length === 0) {
-        return `You don't have any projects yet. Head to **Discover > Opportunities** to find startup ideas, or create a new project from the **Projects** page.`;
-      }
-      const projectList = projects.map((p, i) =>
-        `${i + 1}. **${p.name}** — Stage: ${formatState(p.state)}${p.viabilityScore ? ` | Score: ${p.viabilityScore}/100` : ''}`
+      if (projects.length === 0) return `No projects yet. Head to **Discover > Opportunities** or create one from **Projects**.`;
+      const list = projects.map((p, i) =>
+        `${i + 1}. **${p.name}** — ${p.state}${p.viabilityScore ? ` | ${p.viabilityScore}/100` : ''}`
       ).join('\n');
-      return `Here are your projects:\n\n${projectList}\n\nWhat would you like to know about any of them?`;
+      return `Your projects:\n\n${list}`;
     }
 
-    if (msg.includes('forgeon') || msg.includes('platform') || msg.includes('plataforma')) {
-      return `**Forgeon** is a Structured Startup Operating System. It transforms ideas into validated, deployable digital startups.\n\nCore systems:\n- 🔍 **Discover** — find opportunities & market gaps\n- 📊 **Market Intelligence** — real-time market insights\n- 📝 **Project Wizard** — structure your idea\n- 🎯 **Evaluation** — AI-powered viability scoring\n- 🔨 **Build** — auto-generate your MVP\n- 📚 **Learn** — personalized courses\n- 🤖 **Assistant** — that's me!\n\nWhat would you like to explore?`;
+    if (msg.includes('forgeon') || msg.includes('platform')) {
+      return `**Forgeon** transforms ideas into validated startups. Systems: Discover, Market Intelligence, Wizard, Evaluation, Build, Learn, and me (Assistant).`;
     }
 
-    const projectCount = context.stats.totalProjects;
-    const hint = projectCount > 0
-      ? `\n\nYou have ${projectCount} project${projectCount > 1 ? 's' : ''} — I can help with any of them.`
-      : `\n\nTip: Check out **Discover > Opportunities** to find your next startup idea.`;
-
-    return `I'm currently running in offline mode (no OpenAI key configured). I can still help with basic Forgeon questions.\n\nTo unlock full AI capabilities, add your OpenAI API key to the .env file.${hint}`;
+    const hint = context.stats.totalProjects > 0
+      ? `You have ${context.stats.totalProjects} project${context.stats.totalProjects > 1 ? 's' : ''}.`
+      : `Try **Discover > Opportunities** to find ideas.`;
+    return `I'm in offline mode (no AI key configured). I can help with basic Forgeon questions. ${hint}\n\nTo unlock full AI: add a **GEMINI_API_KEY** (free) or **OPENAI_API_KEY** to your .env file.`;
   }
 }
 
-function formatState(state: string): string {
-  const states: Record<string, string> = {
-    IDEA: '💡 Idea',
-    WIZARD_IN_PROGRESS: '📝 Wizard In Progress',
-    WIZARD_COMPLETE: '✅ Wizard Complete',
-    EVALUATING: '🔄 Evaluating',
-    EVALUATED: '📊 Evaluated',
-    BUILD_READY: '🔨 Build Ready',
-    BUILDING: '⚙️ Building',
-    MVP_GENERATED: '🚀 MVP Generated',
-  };
-  return states[state] || state;
-}
-
+// ─── Provider Selection (priority: Gemini > OpenAI > Mock) ───
 export function getAssistantProvider(): AssistantProvider {
+  if (process.env.GEMINI_API_KEY) {
+    console.log('[Assistant] Using Gemini provider (free) with model:', process.env.GEMINI_MODEL || 'gemini-2.0-flash');
+    return new GeminiProvider();
+  }
   if (process.env.OPENAI_API_KEY) {
     console.log('[Assistant] Using OpenAI provider with model:', process.env.ASSISTANT_MODEL || 'gpt-4o-mini');
     return new OpenAIProvider();
   }
-  console.log('[Assistant] No OPENAI_API_KEY found, using mock provider');
+  console.log('[Assistant] No API key found, using mock provider');
   return new MockAssistantProvider();
 }
