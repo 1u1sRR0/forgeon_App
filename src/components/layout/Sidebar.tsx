@@ -28,6 +28,7 @@ export default function Sidebar() {
         { name: 'Market Gaps', href: '/dashboard/discover/gaps' },
       ],
     },
+    { name: 'Market Intelligence', href: '/dashboard/market-intelligence', icon: TrendingUp },
     { name: 'Learn', href: '/dashboard/learn', icon: BookOpen },
     { name: 'Assistant', href: '/dashboard/assistant', icon: MessageCircle },
   ];

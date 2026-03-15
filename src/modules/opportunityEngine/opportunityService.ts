@@ -4,40 +4,35 @@ import {
   OpportunityFilters,
   PaginatedOpportunities,
 } from './opportunityTypes';
-import { MockOpportunityProvider } from './providers/mockProvider';
+import { getOpportunityProvider } from './providerFactory';
 import { generateWizardSeed } from './utils/wizardSeedGenerator';
 
 export class OpportunityService {
-  private provider = new MockOpportunityProvider();
+  private provider = getOpportunityProvider();
 
   /**
    * Generate and save opportunities for a user
    */
   async generateAndSaveOpportunities(
     userId: string,
-    count: number = 12,
+    count: number = 30,
     sectors?: string[]
   ): Promise<number> {
     try {
-      // Generate opportunities
-      const opportunities = await this.provider.generateOpportunities(
-        userId,
-        count,
-        sectors
-      );
+      const opportunities = await this.provider.generateOpportunities(userId, count, sectors);
 
-      // Save to database
       await prisma.opportunity.createMany({
         data: opportunities.map((opp) => ({
+          id: crypto.randomUUID(),
           userId,
           title: opp.title,
           hook: opp.hook,
-          category: opp.sector, // Use sector as category
+          category: opp.sector,
           sector: opp.sector,
-          problemStatement: opp.hook, // Use hook as problem statement
+          problemStatement: opp.hook,
           targetAudience: opp.buyerPersona || 'General audience',
           solutionOverview: opp.mvpScope || 'Solution overview',
-          coreFeatures: [], // Empty array for now
+          coreFeatures: [],
           painLevel: opp.painLevel,
           buyerPersona: opp.buyerPersona,
           mvpScope: opp.mvpScope,
@@ -61,7 +56,8 @@ export class OpportunityService {
           acceptanceCriteria: opp.acceptanceCriteria,
           nextSteps: opp.nextSteps,
           viabilityScore: opp.viabilityScore,
-        })) as any, // Type assertion to bypass Prisma client mismatch
+          updatedAt: new Date(),
+        })) as any,
         skipDuplicates: true,
       });
 
@@ -192,10 +188,12 @@ export class OpportunityService {
     // Create project
     const project = await prisma.project.create({
       data: {
+        id: crypto.randomUUID(),
         userId,
         name: opportunity.title,
         description: opportunity.hook,
         state: 'IDEA',
+        updatedAt: new Date(),
       },
     });
 
@@ -205,6 +203,7 @@ export class OpportunityService {
     // Create opportunity-project link with wizard seed
     await prisma.opportunityProjectLink.create({
       data: {
+        id: crypto.randomUUID(),
         opportunityId,
         projectId: project.id,
         wizardSeed: wizardSeed as any,

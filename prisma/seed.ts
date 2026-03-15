@@ -1,21 +1,29 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 
 const prisma = new PrismaClient();
+
+function genId() {
+  return crypto.randomUUID();
+}
 
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Create demo user
+  const now = new Date();
   const hashedPassword = await bcrypt.hash('Demo123!', 10);
-  
+
+  // Create demo user
   const demoUser = await prisma.user.upsert({
     where: { email: 'demo@mvpincubator.com' },
     update: {},
     create: {
+      id: genId(),
       email: 'demo@mvpincubator.com',
       name: 'Demo User',
       password: hashedPassword,
+      updatedAt: now,
     },
   });
 
@@ -31,6 +39,7 @@ async function main() {
       description: 'A smart task management app that uses AI to prioritize and suggest optimal work schedules',
       state: 'IDEA',
       userId: demoUser.id,
+      updatedAt: now,
     },
   });
 
@@ -46,6 +55,7 @@ async function main() {
       description: 'A curated marketplace connecting businesses with vetted freelance designers',
       state: 'STRUCTURED',
       userId: demoUser.id,
+      updatedAt: now,
     },
   });
 
@@ -57,8 +67,8 @@ async function main() {
     { step: 2, key: 'timeline', value: '6-12 months' },
     { step: 3, key: 'businessType', value: 'Marketplace' },
     { step: 4, key: 'targetAudience', value: 'Small to medium businesses needing design work (10-100 employees)' },
-    { step: 5, key: 'problemStatement', value: 'Businesses struggle to find reliable, high-quality freelance designers. Existing platforms have too many low-quality providers and lack proper vetting.' },
-    { step: 6, key: 'valueProposition', value: 'Curated marketplace with pre-vetted designers, quality guarantees, and project management tools built-in' },
+    { step: 5, key: 'problemStatement', value: 'Businesses struggle to find reliable, high-quality freelance designers.' },
+    { step: 6, key: 'valueProposition', value: 'Curated marketplace with pre-vetted designers and quality guarantees' },
     { step: 7, key: 'monetizationModel', value: 'Commission on transactions (15% from designers)' },
     { step: 8, key: 'differentiation', value: 'Strict vetting process, quality guarantees, integrated project management' },
     { step: 9, key: 'deliveryModel', value: 'Online platform with escrow payments and milestone tracking' },
@@ -76,11 +86,13 @@ async function main() {
       },
       update: {},
       create: {
+        id: genId(),
         projectId: structuredProject.id,
         step: answer.step,
         key: answer.key,
         value: answer.value,
         completed: true,
+        updatedAt: now,
       },
     });
   }
@@ -97,12 +109,14 @@ async function main() {
       description: 'Real-time analytics dashboard for SaaS businesses to track key metrics',
       state: 'BUILD_READY',
       userId: demoUser.id,
+      updatedAt: now,
     },
   });
 
   // Add viability score
   await prisma.viabilityScore.create({
     data: {
+      id: genId(),
       projectId: buildReadyProject.id,
       marketScore: 22,
       productScore: 21,
@@ -122,10 +136,12 @@ async function main() {
   // Add template mapping
   await prisma.templateMapping.create({
     data: {
+      id: genId(),
       projectId: buildReadyProject.id,
       recommendedTemplate: 'SAAS_BASIC',
       confidence: 0.95,
       reasoning: 'SaaS business model with dashboard UI requirements matches SAAS_BASIC template',
+      updatedAt: now,
     },
   });
 
@@ -142,10 +158,12 @@ async function main() {
   for (const type of artifactTypes) {
     await prisma.generatedArtifact.create({
       data: {
+        id: genId(),
         projectId: buildReadyProject.id,
         type: type as any,
         title: `${type.replace(/_/g, ' ')} for ${buildReadyProject.name}`,
-        content: `# ${type.replace(/_/g, ' ')}\n\nThis is a sample artifact generated for demonstration purposes.\n\n## Key Points\n\n- Point 1\n- Point 2\n- Point 3`,
+        content: `# ${type.replace(/_/g, ' ')}\n\nSample artifact for demonstration.\n\n## Key Points\n\n- Point 1\n- Point 2\n- Point 3`,
+        updatedAt: now,
       },
     });
   }

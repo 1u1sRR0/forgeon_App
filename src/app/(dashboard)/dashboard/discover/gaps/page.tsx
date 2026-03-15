@@ -15,15 +15,11 @@ export default function MarketGapsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Filters
   const [sector, setSector] = useState(searchParams.get('sector') || '');
   const [competitionLevel, setCompetitionLevel] = useState(searchParams.get('competitionLevel') || '');
   const [sort, setSort] = useState(searchParams.get('sort') || 'newest');
 
-  useEffect(() => {
-    fetchGaps();
-  }, [sector, competitionLevel, sort, page]);
+  useEffect(() => { fetchGaps(); }, [sector, competitionLevel, sort, page]);
 
   const fetchGaps = async () => {
     setIsLoading(true);
@@ -33,190 +29,109 @@ export default function MarketGapsPage() {
       if (competitionLevel) params.set('competitionLevel', competitionLevel);
       params.set('sort', sort);
       params.set('page', page.toString());
-
-      const response = await fetch(`/api/discover/market-gaps?${params}`);
-      if (!response.ok) throw new Error('Failed to fetch gaps');
-
-      const data = await response.json();
-      setGaps(data.gaps);
-      setSectors(data.sectors);
-      setTotalPages(data.totalPages);
-    } catch (error) {
-      console.error('Error fetching gaps:', error);
-    } finally {
-      setIsLoading(false);
-    }
+      const res = await fetch(`/api/discover/gaps?${params}`);
+      if (!res.ok) throw new Error('Failed');
+      const data = await res.json();
+      setGaps(data.gaps); setSectors(data.sectors); setTotalPages(data.totalPages);
+    } catch (e) { console.error(e); } finally { setIsLoading(false); }
   };
 
   const handleGenerateVariants = async (gapId: string): Promise<GapVariant[]> => {
-    const response = await fetch(`/api/discover/market-gaps/${gapId}/generate-variants`, {
-      method: 'POST',
-    });
-    if (!response.ok) throw new Error('Failed to generate variants');
-    const data = await response.json();
-    return data.variants;
+    const res = await fetch(`/api/discover/market-gaps/${gapId}/generate-variants`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    return (await res.json()).variants;
   };
 
   const handleCreateProject = async (variantId: string) => {
-    const gapId = selectedGap?.id;
-    const response = await fetch(
-      `/api/discover/market-gaps/${gapId}/variants/${variantId}/start-project`,
-      { method: 'POST' }
-    );
-    if (!response.ok) throw new Error('Failed to create project');
-    const data = await response.json();
-    router.push(`/dashboard/projects/${data.projectId}`);
+    const res = await fetch(`/api/discover/market-gaps/${selectedGap?.id}/variants/${variantId}/start-project`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    router.push(`/dashboard/projects/${(await res.json()).projectId}`);
   };
 
+  const selectStyle = { backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)', color: 'var(--text-primary)' };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Market Gaps</h1>
-          <p className="text-gray-400">
-            Discover underserved market segments and generate opportunity variants
-          </p>
+          <h1 className="text-4xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Market Gaps</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Discover underserved market segments and generate opportunity variants</p>
         </div>
 
         {/* Filters */}
-        <div className="mb-6 p-4 bg-gray-800/50 backdrop-blur-sm rounded-xl border border-gray-700/50">
+        <div className="mb-6 p-4 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-subtle)' }}>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Sector Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Sector</label>
-              <select
-                value={sector}
-                onChange={(e) => {
-                  setSector(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Sector</label>
+              <select value={sector} onChange={(e) => { setSector(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500" style={selectStyle}>
                 <option value="">All Sectors</option>
-                {sectors.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+                {sectors.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-
-            {/* Competition Level Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Competition</label>
-              <select
-                value={competitionLevel}
-                onChange={(e) => {
-                  setCompetitionLevel(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Competition</label>
+              <select value={competitionLevel} onChange={(e) => { setCompetitionLevel(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500" style={selectStyle}>
                 <option value="">All Levels</option>
-                <option value="low">Low Competition</option>
-                <option value="medium">Medium Competition</option>
-                <option value="high">High Competition</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
               </select>
             </div>
-
-            {/* Sort */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
-              <select
-                value={sort}
-                onChange={(e) => {
-                  setSort(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Sort By</label>
+              <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}
+                className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-purple-500" style={selectStyle}>
                 <option value="newest">Newest First</option>
                 <option value="competition-asc">Lowest Competition</option>
               </select>
             </div>
-
-            {/* Clear Filters */}
             <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setSector('');
-                  setCompetitionLevel('');
-                  setSort('newest');
-                  setPage(1);
-                }}
-                className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              >
+              <button onClick={() => { setSector(''); setCompetitionLevel(''); setSort('newest'); setPage(1); }}
+                className="w-full px-4 py-2 rounded-lg border transition-colors text-sm font-medium"
+                style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)', color: 'var(--text-secondary)' }}>
                 Clear Filters
               </button>
             </div>
           </div>
         </div>
 
-        {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--accent-primary)' }} />
+            <span className="ml-3" style={{ color: 'var(--text-secondary)' }}>Loading market gaps...</span>
           </div>
         )}
 
-        {/* Gaps Grid */}
         {!isLoading && gaps.length > 0 && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {gaps.map((gap) => (
-                <MarketGapCard key={gap.id} gap={gap} onClick={() => setSelectedGap(gap)} />
-              ))}
+              {gaps.map((gap) => <MarketGapCard key={gap.id} gap={gap} onClick={() => setSelectedGap(gap)} />)}
             </div>
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                >
-                  Previous
-                </button>
-                <span className="text-gray-400">
-                  Page {page} of {totalPages}
-                </span>
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-                >
-                  Next
-                </button>
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                  className="px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
+                  style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}>Previous</button>
+                <span style={{ color: 'var(--text-secondary)' }}>Page {page} of {totalPages}</span>
+                <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                  className="px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
+                  style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}>Next</button>
               </div>
             )}
           </>
         )}
 
-        {/* Empty State */}
         {!isLoading && gaps.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-400 mb-4">No market gaps found</p>
-            <button
-              onClick={fetchGaps}
-              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-            >
-              Refresh
-            </button>
+            <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>No market gaps found</p>
+            <button onClick={fetchGaps} className="px-6 py-3 rounded-lg font-medium" style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}>Refresh</button>
           </div>
         )}
       </div>
 
-      {/* Modal */}
-      {selectedGap && (
-        <MarketGapModal
-          gap={selectedGap}
-          onClose={() => setSelectedGap(null)}
-          onGenerateVariants={handleGenerateVariants}
-          onCreateProject={handleCreateProject}
-        />
-      )}
+      {selectedGap && <MarketGapModal gap={selectedGap} onClose={() => setSelectedGap(null)} onGenerateVariants={handleGenerateVariants} onCreateProject={handleCreateProject} />}
     </div>
   );
 }

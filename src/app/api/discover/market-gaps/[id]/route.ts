@@ -23,7 +23,7 @@ export async function GET(
         userId: session.user.id,
       },
       include: {
-        variants: true,
+        MarketGapVariant: true,
       },
     });
 
@@ -41,7 +41,7 @@ export async function GET(
       evidence: gap.evidence,
       wedgeStrategy: gap.wedgeStrategy,
       estimatedMarketSize: gap.estimatedMarketSize,
-      variants: gap.variants.map((v) => ({
+      variants: (gap as any).MarketGapVariant.map((v: any) => ({
         id: v.id,
         approach: v.approach,
         title: v.title,

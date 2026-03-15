@@ -312,16 +312,17 @@ model Project {
   userId            String
   createdAt         DateTime            @default(now())
   updatedAt         DateTime
-  BuildArtifact     BuildArtifact[]
-  Course            Course?
-  EvaluationFinding EvaluationFinding[]
-  GeneratedArtifact GeneratedArtifact[]
-  User              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ProjectVersion    ProjectVersion[]
-  RiskMatrix        RiskMatrix[]
-  TemplateMapping   TemplateMapping?
-  ViabilityScore    ViabilityScore[]
-  WizardAnswer      WizardAnswer[]
+  BuildArtifact       BuildArtifact[]
+  Course              Course?
+  EvaluationFinding   EvaluationFinding[]
+  GeneratedArtifact   GeneratedArtifact[]
+  User                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ProjectVersion      ProjectVersion[]
+  ProjectResearchItem ProjectResearchItem[]
+  RiskMatrix          RiskMatrix[]
+  TemplateMapping     TemplateMapping?
+  ViabilityScore      ViabilityScore[]
+  WizardAnswer        WizardAnswer[]
 
   @@index([createdAt])
   @@index([state])
@@ -525,4 +526,47 @@ enum TemplateType {
   MARKETPLACE_MINI
   ECOMMERCE_MINI
   LANDING_BLOG
+}
+
+enum MarketIntelType {
+  TREND
+  SECTOR_INSIGHT
+  STARTUP_DATA
+  DEMAND_INDICATOR
+}
+
+model MarketIntelItem {
+  id                  String                @id
+  userId              String
+  title               String
+  type                MarketIntelType
+  summary             String
+  sector              String
+  confidence          Int
+  signals             Json
+  content             Json
+  region              String?
+  timeframe           String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime
+  ProjectResearchItem ProjectResearchItem[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([sector])
+  @@index([confidence])
+}
+
+model ProjectResearchItem {
+  id              String          @id
+  projectId       String
+  marketIntelId   String
+  notes           String?
+  createdAt       DateTime        @default(now())
+  Project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  MarketIntelItem MarketIntelItem @relation(fields: [marketIntelId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, marketIntelId])
+  @@index([projectId])
+  @@index([marketIntelId])
 }

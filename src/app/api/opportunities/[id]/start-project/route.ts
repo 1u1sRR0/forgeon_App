@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { OpportunityService } from '@/modules/opportunityEngine/opportunityService';
 
-const opportunityService = new OpportunityService();
+const service = new OpportunityService();
 
 export async function POST(
   request: NextRequest,
@@ -15,19 +15,14 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id: opportunityId } = await params;
-
-    const result = await opportunityService.createProjectFromOpportunity(
-      session.user.id,
-      opportunityId
-    );
-
+    const { id } = await params;
+    const result = await service.createProjectFromOpportunity(session.user.id, id);
     return NextResponse.json(result);
-  } catch (error) {
+  } catch (error: any) {
+    if (error.message === 'Opportunity not found') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
     console.error('Error creating project from opportunity:', error);
-    return NextResponse.json(
-      { error: 'Failed to create project' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 });
   }
 }

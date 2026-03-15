@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import type { MarketGapData, GapVariant } from '@/modules/marketGapEngine/marketGapTypes';
 
 interface MarketGapModalProps {
@@ -10,125 +11,74 @@ interface MarketGapModalProps {
   onCreateProject: (variantId: string) => Promise<void>;
 }
 
-export function MarketGapModal({
-  gap,
-  onClose,
-  onGenerateVariants,
-  onCreateProject,
-}: MarketGapModalProps) {
+export function MarketGapModal({ gap, onClose, onGenerateVariants, onCreateProject }: MarketGapModalProps) {
   const [variants, setVariants] = useState<GapVariant[]>(gap.variants || []);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleEscape);
     document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
-    };
+    return () => { document.removeEventListener('keydown', handleEscape); document.body.style.overflow = 'unset'; };
   }, [onClose]);
 
   const handleGenerateVariants = async () => {
     setIsGenerating(true);
-    try {
-      const newVariants = await onGenerateVariants(gap.id);
-      setVariants(newVariants);
-    } catch (error) {
-      console.error('Failed to generate variants:', error);
-    } finally {
-      setIsGenerating(false);
-    }
+    try { setVariants(await onGenerateVariants(gap.id)); } catch (e) { console.error(e); } finally { setIsGenerating(false); }
   };
 
   const handleCreateProject = async (variantId: string) => {
     setIsCreatingProject(variantId);
-    try {
-      await onCreateProject(variantId);
-    } catch (error) {
-      console.error('Failed to create project:', error);
-      setIsCreatingProject(null);
-    }
+    try { await onCreateProject(variantId); } catch (e) { console.error(e); setIsCreatingProject(null); }
   };
 
-  const competitionColor =
-    gap.competitionLevel === 'low'
-      ? 'bg-green-500/20 text-green-400'
-      : gap.competitionLevel === 'medium'
-        ? 'bg-yellow-500/20 text-yellow-400'
-        : 'bg-red-500/20 text-red-400';
+  const competitionColor = gap.competitionLevel === 'low' ? 'bg-green-500/15 text-green-400' : gap.competitionLevel === 'medium' ? 'bg-yellow-500/15 text-yellow-400' : 'bg-red-500/15 text-red-400';
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
-      onClick={onClose}
-    >
-      <div
-        className="relative bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-gray-700"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          aria-label="Close modal"
-          className="absolute top-4 right-4 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors z-10"
-        >
-          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }} onClick={onClose}>
+      <div className="relative rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border"
+        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-subtle)' }} onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} aria-label="Close modal" className="absolute top-4 right-4 p-2 rounded-lg z-10 transition-colors" style={{ backgroundColor: 'var(--bg-elevated)' }}>
+          <X className="w-5 h-5" style={{ color: 'var(--text-secondary)' }} />
         </button>
 
         <div className="p-8">
-          {/* Header */}
           <div className="mb-6">
             <div className="flex items-start gap-4 mb-4">
-              <h2 className="text-3xl font-bold text-white flex-1">{gap.title}</h2>
-              <span className={`px-3 py-1 rounded-lg text-sm font-medium ${competitionColor}`}>
-                {gap.competitionLevel} competition
-              </span>
+              <h2 className="text-3xl font-bold flex-1" style={{ color: 'var(--text-primary)' }}>{gap.title}</h2>
+              <span className={`px-3 py-1 rounded-lg text-sm font-medium ${competitionColor}`}>{gap.competitionLevel}</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="px-3 py-1 bg-gray-800 text-gray-300 rounded-lg text-sm">{gap.sector}</span>
-              <span className="text-sm text-gray-500">{gap.estimatedMarketSize}</span>
+              <span className="px-3 py-1 rounded-lg text-sm" style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>{gap.sector}</span>
+              <span className="text-sm" style={{ color: 'var(--text-tertiary)' }}>{gap.estimatedMarketSize}</span>
             </div>
           </div>
 
           {/* Underserved Segment */}
-          <div className="mb-6 p-4 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+          <div className="mb-6 p-4 rounded-xl border" style={{ backgroundColor: 'rgba(168,85,247,0.05)', borderColor: 'rgba(168,85,247,0.2)' }}>
             <h3 className="text-sm font-semibold text-purple-400 mb-2">Underserved Segment</h3>
-            <p className="text-white">{gap.underservedSegment}</p>
+            <p style={{ color: 'var(--text-primary)' }}>{gap.underservedSegment}</p>
           </div>
 
           {/* Gap Description */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-3">Market Gap Analysis</h3>
-            <p className="text-gray-300 leading-relaxed">{gap.gapDescription}</p>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Market Gap Analysis</h3>
+            <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{gap.gapDescription}</p>
           </div>
 
           {/* Evidence Signals */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-3">Evidence Signals</h3>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Evidence Signals</h3>
             <div className="space-y-3">
-              {gap.evidence.map((evidence, index) => {
-                const strengthColor =
-                  evidence.strength === 'strong'
-                    ? 'bg-green-500/20 text-green-400'
-                    : evidence.strength === 'moderate'
-                      ? 'bg-yellow-500/20 text-yellow-400'
-                      : 'bg-gray-500/20 text-gray-400';
-
+              {gap.evidence.map((ev, i) => {
+                const sc = ev.strength === 'strong' ? 'bg-green-500/15 text-green-400' : ev.strength === 'moderate' ? 'bg-yellow-500/15 text-yellow-400' : 'bg-gray-500/15 text-gray-400';
                 return (
-                  <div key={index} className="flex items-start gap-3 p-3 bg-gray-800/50 rounded-lg">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${strengthColor}`}>
-                      {evidence.strength}
-                    </span>
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-elevated)' }}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${sc}`}>{ev.strength}</span>
                     <div className="flex-1">
-                      <p className="text-gray-300 text-sm">{evidence.signal}</p>
-                      <p className="text-gray-500 text-xs mt-1">Source: {evidence.source}</p>
+                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{ev.signal}</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>Source: {ev.source}</p>
                     </div>
                   </div>
                 );
@@ -138,20 +88,18 @@ export function MarketGapModal({
 
           {/* Wedge Strategy */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-3">Recommended Wedge Strategy</h3>
-            <p className="text-gray-300 leading-relaxed">{gap.wedgeStrategy}</p>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Wedge Strategy</h3>
+            <p className="leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{gap.wedgeStrategy}</p>
           </div>
 
-          {/* Variants Section */}
+          {/* Variants */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Opportunity Variants</h3>
+              <h3 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Opportunity Variants</h3>
               {variants.length === 0 && (
-                <button
-                  onClick={handleGenerateVariants}
-                  disabled={isGenerating}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
-                >
+                <button onClick={handleGenerateVariants} disabled={isGenerating}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                  style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}>
                   {isGenerating ? 'Generating...' : 'Generate 3 Opportunities'}
                 </button>
               )}
@@ -159,32 +107,24 @@ export function MarketGapModal({
 
             {variants.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {variants.map((variant) => (
-                  <div
-                    key={variant.id}
-                    className="p-4 bg-gray-800/50 border border-gray-700 rounded-xl hover:border-purple-500/50 transition-colors"
-                  >
-                    <div className="mb-3">
-                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
-                        {variant.approach}
-                      </span>
-                    </div>
-                    <h4 className="text-white font-semibold mb-2">{variant.title}</h4>
-                    <p className="text-sm text-gray-400 mb-2">{variant.targetSubSegment}</p>
-                    <p className="text-xs text-gray-500 mb-4">{variant.differentiator}</p>
-                    <button
-                      onClick={() => handleCreateProject(variant.id)}
-                      disabled={isCreatingProject === variant.id}
-                      className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white rounded-lg transition-colors text-sm font-medium"
-                    >
-                      {isCreatingProject === variant.id ? 'Creating...' : 'Create Project'}
+                {variants.map((v) => (
+                  <div key={v.id} className="p-4 rounded-xl border transition-colors"
+                    style={{ backgroundColor: 'var(--bg-elevated)', borderColor: 'var(--border-subtle)' }}>
+                    <span className="inline-block px-2 py-1 rounded text-xs font-medium mb-3 bg-purple-500/15 text-purple-400">{v.approach}</span>
+                    <h4 className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>{v.title}</h4>
+                    <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>{v.targetSubSegment}</p>
+                    <p className="text-xs mb-4" style={{ color: 'var(--text-tertiary)' }}>{v.differentiator}</p>
+                    <button onClick={() => handleCreateProject(v.id)} disabled={isCreatingProject === v.id}
+                      className="w-full px-3 py-2 rounded-lg text-sm font-medium transition-all disabled:opacity-50"
+                      style={{ backgroundColor: 'var(--accent-primary)', color: 'white' }}>
+                      {isCreatingProject === v.id ? 'Creating...' : 'Create Project'}
                     </button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-400 text-sm">
-                Generate opportunity variants to explore different strategic approaches to this market gap.
+              <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                Generate opportunity variants to explore different strategic approaches.
               </p>
             )}
           </div>

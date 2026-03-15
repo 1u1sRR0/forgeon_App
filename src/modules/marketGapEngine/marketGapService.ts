@@ -7,11 +7,11 @@ import type {
   PaginatedMarketGaps,
   GapVariant,
 } from './marketGapTypes';
-import { MockMarketGapProvider } from './providers/mockProvider';
+import { getMarketGapProvider } from './providerFactory';
 import { generateWizardSeed } from '../opportunityEngine/utils/wizardSeedGenerator';
 
 export class MarketGapService {
-  private provider = new MockMarketGapProvider();
+  private provider = getMarketGapProvider();
 
   /**
    * Generates and saves market gaps to database
@@ -25,16 +25,18 @@ export class MarketGapService {
 
     const created = await prisma.marketGap.createMany({
       data: gaps.map((gap) => ({
+        id: crypto.randomUUID(),
         userId,
         title: gap.title,
         sector: gap.sector,
         underservedSegment: gap.underservedSegment,
         competitionLevel: gap.competitionLevel,
         gapDescription: gap.gapDescription,
-        evidence: gap.evidence as any, // Convert to JsonValue
+        evidence: gap.evidence as any,
         wedgeStrategy: gap.wedgeStrategy,
         estimatedMarketSize: gap.estimatedMarketSize,
-      })) as any, // Type assertion to bypass Prisma client mismatch
+        updatedAt: new Date(),
+      })) as any,
     });
 
     return created.count;
@@ -94,7 +96,7 @@ export class MarketGapService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
-          variants: true,
+          MarketGapVariant: true,
         },
       }),
       prisma.marketGap.count({ where }),
@@ -119,7 +121,7 @@ export class MarketGapService {
         evidence: g.evidence as any,
         wedgeStrategy: g.wedgeStrategy,
         estimatedMarketSize: g.estimatedMarketSize,
-        variants: g.variants.map((v: any) => ({
+        variants: (g as any).MarketGapVariant.map((v: any) => ({
           id: v.id,
           approach: v.approach as 'Premium' | 'Volume' | 'Niche',
           title: v.title,
@@ -185,13 +187,14 @@ export class MarketGapService {
     // Save variants
     await prisma.marketGapVariant.createMany({
       data: variants.map((v) => ({
+        id: crypto.randomUUID(),
         marketGapId: gapId,
         approach: v.approach,
         title: v.title,
         targetSubSegment: v.targetSubSegment,
         differentiator: v.differentiator,
         fullDossier: v.fullDossier as any,
-      })) as any, // Type assertion to bypass Prisma client mismatch
+      })) as any,
     });
 
     return variants;
@@ -207,10 +210,10 @@ export class MarketGapService {
     // Get variant with gap
     const variant = await prisma.marketGapVariant.findFirst({
       where: { id: variantId },
-      include: { marketGap: true },
+      include: { MarketGap: true },
     });
 
-    if (!variant || variant.marketGap.userId !== userId) {
+    if (!variant || (variant as any).MarketGap.userId !== userId) {
       throw new Error('Variant not found');
     }
 
@@ -219,10 +222,12 @@ export class MarketGapService {
     // Create project
     const project = await prisma.project.create({
       data: {
+        id: crypto.randomUUID(),
         userId,
         name: dossier.title,
         description: dossier.problemStatement,
         state: 'IDEA',
+        updatedAt: new Date(),
       },
     });
 
@@ -232,11 +237,12 @@ export class MarketGapService {
     // Create link with wizard seed
     await prisma.marketGapProjectLink.create({
       data: {
+        id: crypto.randomUUID(),
         projectId: project.id,
-        marketGapId: variant.marketGap.id,
+        marketGapId: (variant as any).MarketGap.id,
         marketGapVariantId: variantId,
         wizardSeed: wizardSeed as any,
-      } as any, // Type assertion to bypass Prisma client mismatch
+      } as any,
     });
 
     return {

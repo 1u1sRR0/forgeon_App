@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const pageSize = 12;
 
     // Map sort parameter
-    const sort = sortParam === 'competition-asc' ? 'competition' : 'newest';
+    const sort: 'newest' | 'competition-asc' = sortParam === 'competition-asc' ? 'competition-asc' : 'newest';
 
     // Get market gaps from service with auto-seeding
     const result = await marketGapService.getMarketGapsWithAutoSeed(
