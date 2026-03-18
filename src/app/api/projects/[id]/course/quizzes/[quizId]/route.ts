@@ -31,14 +31,14 @@ export async function GET(
     const quiz = await prisma.quiz.findFirst({
       where: {
         id: quizId,
-        level: {
-          course: {
+        CourseLevel: {
+          Course: {
             projectId,
           },
         },
       },
       include: {
-        level: {
+        CourseLevel: {
           select: {
             id: true,
             title: true,

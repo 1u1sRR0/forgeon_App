@@ -1,13 +1,28 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CourseProvider, useCourse } from '@/contexts/CourseContext';
-import { BookOpen, CheckCircle, Clock, Trophy } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, RefreshCw, Trophy } from 'lucide-react';
 
 function CourseOverviewContent({ projectId }: { projectId: string }) {
-  const { course, loading, error } = useCourse();
+  const { course, loading, error, refreshCourse } = useCourse();
   const router = useRouter();
+  const [regenerating, setRegenerating] = useState(false);
+
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/course?regenerate=true`);
+      if (response.ok) {
+        await refreshCourse();
+      }
+    } catch (err) {
+      console.error('Error regenerating course:', err);
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -26,7 +41,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Retry
+            Reintentar
           </button>
         </div>
       </div>
@@ -36,7 +51,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
   if (!course) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">No course found</p>
+        <p className="text-gray-400">No se encontró ningún curso</p>
       </div>
     );
   }
@@ -55,7 +70,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
           <div className="flex items-center gap-3">
             <BookOpen className="w-8 h-8 text-blue-500" />
             <div>
-              <p className="text-gray-400 text-sm">Total Levels</p>
+              <p className="text-gray-400 text-sm">Niveles</p>
               <p className="text-2xl font-bold text-white">{course.levels.length}</p>
             </div>
           </div>
@@ -64,7 +79,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
           <div className="flex items-center gap-3">
             <Clock className="w-8 h-8 text-green-500" />
             <div>
-              <p className="text-gray-400 text-sm">Total Lessons</p>
+              <p className="text-gray-400 text-sm">Lecciones</p>
               <p className="text-2xl font-bold text-white">
                 {course.levels.reduce((acc, level) => acc + level.lessons.length, 0)}
               </p>
@@ -75,7 +90,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
           <div className="flex items-center gap-3">
             <Trophy className="w-8 h-8 text-yellow-500" />
             <div>
-              <p className="text-gray-400 text-sm">Completion</p>
+              <p className="text-gray-400 text-sm">Completado</p>
               <p className="text-2xl font-bold text-white">0%</p>
             </div>
           </div>
@@ -85,13 +100,23 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
       {/* Levels List */}
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-white">Course Levels</h2>
-          <button
-            onClick={() => router.push(`/dashboard/projects/${projectId}/course/glossary`)}
-            className="text-blue-500 hover:text-blue-400 text-sm"
-          >
-            View Glossary →
-          </button>
+          <h2 className="text-2xl font-bold text-white">Niveles del Curso</h2>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              className="flex items-center gap-2 text-gray-400 hover:text-white text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${regenerating ? 'animate-spin' : ''}`} />
+              {regenerating ? 'Regenerando...' : 'Regenerar Curso'}
+            </button>
+            <button
+              onClick={() => router.push(`/dashboard/projects/${projectId}/course/glossary`)}
+              className="text-blue-500 hover:text-blue-400 text-sm"
+            >
+              Ver Glosario →
+            </button>
+          </div>
         </div>
 
         {course.levels.map((level) => (
@@ -110,7 +135,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
                 
                 {/* Learning Objectives */}
                 <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-2">Learning Objectives:</p>
+                  <p className="text-sm text-gray-500 mb-2">Objetivos de Aprendizaje:</p>
                   <ul className="space-y-1">
                     {level.learningObjectives.slice(0, 3).map((objective, idx) => (
                       <li key={idx} className="text-sm text-gray-400 flex items-start gap-2">
@@ -123,7 +148,7 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
 
                 {/* Stats */}
                 <div className="flex items-center gap-6 text-sm text-gray-500">
-                  <span>{level.lessons.length} lessons</span>
+                  <span>{level.lessons.length} lecciones</span>
                   <span>
                     {level.lessons.filter((l) => l.quiz).length} quizzes
                   </span>

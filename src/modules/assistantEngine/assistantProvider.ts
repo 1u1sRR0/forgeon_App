@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Ollama } from 'ollama';
 import { UserContext } from './userContextBuilder';
 
 export interface AssistantProvider {
@@ -38,7 +39,7 @@ Core systems:
 USER'S PROJECTS:
 ${projectsSummary}
 
-Stats: ${context.stats.totalProjects} projects, ${context.stats.evaluatedProjects} evaluated, ${context.stats.builtProjects} built
+Stats: ${context.stats.totalProjects} projects, ${(context.stats as any).evaluatedProjects || 0} evaluated, ${(context.stats as any).builtProjects || 0} built
 
 BEHAVIOR:
 - Be conversational, warm, and direct
@@ -80,9 +81,29 @@ export class GeminiProvider implements AssistantProvider {
       const result = await chat.sendMessage(message);
       return result.response.text() || 'No response generated.';
     } catch (error: unknown) {
-      console.error('Gemini API error:', error);
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      return `Sorry, I encountered an error with Gemini: ${msg}. Please try again.`;
+      console.error('Gemini API error, attempting fallback:', error);
+      // Auto-fallback to OpenAI if available
+      if (process.env.OPENAI_API_KEY) {
+        console.log('[Assistant] Gemini failed, falling back to OpenAI');
+        try {
+          const fallback = new OpenAIProvider();
+          return await fallback.generateResponse(context, message, history);
+        } catch (fallbackError) {
+          console.error('OpenAI fallback also failed:', fallbackError);
+        }
+      }
+      // Try Ollama as next fallback
+      console.log('[Assistant] Trying Ollama fallback (local)');
+      try {
+        const ollamaFallback = new OllamaProvider();
+        return await ollamaFallback.generateResponse(context, message, history);
+      } catch (ollamaError) {
+        console.error('Ollama fallback also failed:', ollamaError);
+      }
+      // Final fallback: Mock provider (always works)
+      console.log('[Assistant] All AI providers failed, using Mock provider');
+      const mock = new MockAssistantProvider();
+      return await mock.generateResponse(context, message, history);
     }
   }
 }
@@ -127,6 +148,58 @@ export class OpenAIProvider implements AssistantProvider {
   }
 }
 
+// ─── Ollama Provider (local or cloud) ───
+export class OllamaProvider implements AssistantProvider {
+  private ollama: Ollama;
+  private model: string;
+  private isCloud: boolean;
+
+  constructor() {
+    const apiKey = process.env.OLLAMA_API_KEY;
+    this.isCloud = !!apiKey;
+
+    if (apiKey) {
+      // Ollama Cloud: use ollama.com/api with Bearer auth
+      this.ollama = new Ollama({
+        host: 'https://ollama.com/api',
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+    } else {
+      // Local Ollama
+      this.ollama = new Ollama({ host: process.env.OLLAMA_HOST || 'http://localhost:11434' });
+    }
+    this.model = process.env.OLLAMA_MODEL || 'llama3.2';
+  }
+
+  async generateResponse(
+    context: UserContext,
+    message: string,
+    history: Array<{ role: string; content: string }>
+  ): Promise<string> {
+    try {
+      const messages = [
+        { role: 'system' as const, content: buildSystemPrompt(context) },
+        ...history.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+        { role: 'user' as const, content: message },
+      ];
+
+      const response = await this.ollama.chat({
+        model: this.model,
+        messages,
+      });
+
+      return response.message.content || 'No response generated.';
+    } catch (error: unknown) {
+      console.error('Ollama API error:', error);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      return `Sorry, I encountered an error with Ollama: ${msg}. Make sure Ollama is running (ollama serve).`;
+    }
+  }
+}
+
 // ─── Mock Provider (fallback) ───
 export class MockAssistantProvider implements AssistantProvider {
   async generateResponse(
@@ -164,16 +237,100 @@ export class MockAssistantProvider implements AssistantProvider {
   }
 }
 
-// ─── Provider Selection (priority: Gemini > OpenAI > Mock) ───
-export function getAssistantProvider(): AssistantProvider {
+// ─── AI Runtime Provider (delegates to unified AI Runtime) ───
+
+class AIRuntimeAssistantProvider implements AssistantProvider {
+  async generateResponse(
+    context: UserContext,
+    message: string,
+    history: Array<{ role: string; content: string }>
+  ): Promise<string> {
+    const { execute } = await import('@/modules/aiRuntime');
+    const { AIModelTask } = await import('@/modules/aiRuntime/aiTypes');
+
+    const systemPrompt = buildSystemPrompt(context);
+    // Include conversation history in the user prompt for context
+    const historyText = history.length > 0
+      ? history.map(m => `${m.role}: ${m.content}`).join('\n') + '\n\nuser: '
+      : '';
+
+    const response = await execute(
+      AIModelTask.ASSISTANT_CHAT,
+      systemPrompt,
+      historyText + message
+    );
+    return response.content;
+  }
+}
+
+// ─── Legacy Provider Selection (Gemini > OpenAI > Ollama > Mock) ───
+
+function getLegacyAssistantProvider(): AssistantProvider {
+  // Gemini first — best for complex conversational tasks
   if (process.env.GEMINI_API_KEY) {
-    console.log('[Assistant] Using Gemini provider (free) with model:', process.env.GEMINI_MODEL || 'gemini-2.0-flash');
+    console.log('[Assistant] Using Gemini provider (PRIMARY) with model:', process.env.GEMINI_MODEL || 'gemini-2.0-flash');
     return new GeminiProvider();
   }
+  // OpenAI second
   if (process.env.OPENAI_API_KEY) {
-    console.log('[Assistant] Using OpenAI provider with model:', process.env.ASSISTANT_MODEL || 'gpt-4o-mini');
+    console.log('[Assistant] Using OpenAI provider (SECONDARY) with model:', process.env.ASSISTANT_MODEL || 'gpt-4o-mini');
     return new OpenAIProvider();
   }
-  console.log('[Assistant] No API key found, using mock provider');
+  // Ollama third
+  if (process.env.OLLAMA_ENABLED === 'true') {
+    const mode = process.env.OLLAMA_API_KEY ? 'cloud' : 'local';
+    console.log(`[Assistant] Using Ollama provider (TERTIARY, ${mode}) with model:`, process.env.OLLAMA_MODEL || 'llama3.2');
+    return new OllamaProvider();
+  }
+  // Mock fallback
+  console.log('[Assistant] No AI providers configured, using mock');
   return new MockAssistantProvider();
+}
+
+// ─── Fallback-Wrapped AI Runtime Provider ───
+
+class FallbackAssistantProvider implements AssistantProvider {
+  private primary: AssistantProvider;
+  private fallback: AssistantProvider;
+
+  constructor(primary: AssistantProvider, fallback: AssistantProvider) {
+    this.primary = primary;
+    this.fallback = fallback;
+  }
+
+  async generateResponse(
+    context: UserContext,
+    message: string,
+    history: Array<{ role: string; content: string }>
+  ): Promise<string> {
+    try {
+      return await this.primary.generateResponse(context, message, history);
+    } catch (error) {
+      console.error('[Assistant] AIRuntimeAssistantProvider failed, falling back to legacy:', error instanceof Error ? error.message : error);
+      return await this.fallback.generateResponse(context, message, history);
+    }
+  }
+}
+
+// ─── Provider Selection (AI Runtime first, legacy chain as fallback) ───
+
+export function getAssistantProvider(): AssistantProvider {
+  // Check if AI Runtime is available via env vars it supports
+  const hasAIRuntime =
+    !!process.env.AI_ROUTING_MODE ||
+    !!process.env.GEMINI_API_KEY ||
+    !!process.env.ANTHROPIC_API_KEY ||
+    process.env.ENABLE_LOCAL_MODELS === 'true';
+
+  if (hasAIRuntime) {
+    console.log('[Assistant] Using AIRuntimeAssistantProvider (delegating to unified AI Runtime)');
+    return new FallbackAssistantProvider(
+      new AIRuntimeAssistantProvider(),
+      getLegacyAssistantProvider()
+    );
+  }
+
+  // No AI Runtime indicators — use legacy provider selection
+  console.log('[Assistant] AI Runtime not configured, using legacy provider selection');
+  return getLegacyAssistantProvider();
 }

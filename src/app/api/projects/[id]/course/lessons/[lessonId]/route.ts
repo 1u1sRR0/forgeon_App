@@ -31,18 +31,19 @@ export async function GET(
     const lesson = await prisma.lesson.findFirst({
       where: {
         id: lessonId,
-        level: {
-          course: {
+        CourseLevel: {
+          Course: {
             projectId,
           },
         },
       },
       include: {
-        level: {
+        CourseLevel: {
           select: {
             id: true,
             title: true,
             levelNumber: true,
+            Quiz: true,
           },
         },
       },
@@ -62,8 +63,24 @@ export async function GET(
       },
     });
 
+    // Transform lesson to match frontend interface
+    const quiz = lesson.CourseLevel.Quiz?.[0];
+    const transformedLesson = {
+      id: lesson.id,
+      title: lesson.title,
+      description: lesson.description,
+      estimatedMinutes: lesson.estimatedMinutes,
+      content: lesson.content || [],
+      quiz: quiz ? { id: quiz.id, title: quiz.title } : undefined,
+      level: {
+        id: lesson.CourseLevel.id,
+        title: lesson.CourseLevel.title,
+        order: lesson.CourseLevel.levelNumber,
+      },
+    };
+
     return NextResponse.json({
-      lesson,
+      lesson: transformedLesson,
       completed: progress?.completed || false,
       timeSpent: progress?.timeSpent || 0,
     });

@@ -6,15 +6,12 @@ import { prisma } from '@/lib/prisma';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
-      where: {
-        id: session.user.id,
-      },
+      where: { id: session.user.id },
       select: {
         id: true,
         email: true,
@@ -39,21 +36,23 @@ export async function GET() {
 export async function PATCH(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
-    const { name } = body;
+    const { name, image } = body;
+
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date(),
+    };
+
+    if (name !== undefined) updateData.name = name || null;
+    if (image !== undefined) updateData.image = image || null;
 
     const user = await prisma.user.update({
-      where: {
-        id: session.user.id,
-      },
-      data: {
-        name: name || null,
-      },
+      where: { id: session.user.id },
+      data: updateData,
       select: {
         id: true,
         email: true,

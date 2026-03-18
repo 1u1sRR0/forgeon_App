@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
 import { calculateViabilityScore } from '@/modules/evaluation/scoringEngine';
 import {
   generateBusinessModelCanvas,
@@ -31,7 +32,7 @@ export async function POST(
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        wizardAnswers: true,
+        WizardAnswer: true,
       },
     });
 
@@ -52,7 +53,7 @@ export async function POST(
 
     // Convert wizard answers to inputs object
     const inputs: Partial<WizardInputs> = {};
-    project.wizardAnswers.forEach((answer) => {
+    (project as any).WizardAnswer.forEach((answer: any) => {
       inputs[answer.key as keyof WizardInputs] = answer.value || undefined;
     });
 
@@ -62,6 +63,7 @@ export async function POST(
     // Save viability score
     const viabilityScore = await prisma.viabilityScore.create({
       data: {
+        id: crypto.randomUUID(),
         projectId: id,
         marketScore: score.marketScore,
         productScore: score.productScore,
@@ -81,6 +83,7 @@ export async function POST(
     if (allFindings.length > 0) {
       await prisma.evaluationFinding.createMany({
         data: allFindings.map((f) => ({
+          id: crypto.randomUUID(),
           projectId: id,
           severity: f.severity,
           code: f.code,
@@ -96,6 +99,7 @@ export async function POST(
     if (allRisks.length > 0) {
       await prisma.riskMatrix.createMany({
         data: allRisks.map((r) => ({
+          id: crypto.randomUUID(),
           projectId: id,
           category: r.category,
           title: r.title,
@@ -105,6 +109,7 @@ export async function POST(
           riskScore: r.impact * r.probability,
           isCritical: r.impact * r.probability >= 16,
           mitigation: r.mitigation,
+          updatedAt: new Date(),
         })),
       });
     }
@@ -149,10 +154,12 @@ export async function POST(
     // Save artifacts
     await prisma.generatedArtifact.createMany({
       data: artifacts.map((a) => ({
+        id: crypto.randomUUID(),
         projectId: id,
         type: a.type as any,
         title: a.title,
         content: a.content,
+        updatedAt: new Date(),
       })),
     });
 
@@ -164,12 +171,15 @@ export async function POST(
         recommendedTemplate: templateMapping.template as any,
         confidence: templateMapping.confidence,
         reasoning: templateMapping.reasoning,
+        updatedAt: new Date(),
       },
       create: {
+        id: crypto.randomUUID(),
         projectId: id,
         recommendedTemplate: templateMapping.template as any,
         confidence: templateMapping.confidence,
         reasoning: templateMapping.reasoning,
+        updatedAt: new Date(),
       },
     });
 

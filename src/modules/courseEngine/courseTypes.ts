@@ -63,6 +63,7 @@ export interface ContentBlock {
   language?: string; // For code blocks
   items?: string[]; // For checklists
   title?: string; // For callouts, warnings, tips
+  steps?: string[]; // For step blocks
 }
 
 export interface Quiz {

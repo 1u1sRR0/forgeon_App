@@ -34,16 +34,16 @@ export async function calculateCourseProgress(
   const course = await prisma.course.findUnique({
     where: { id: courseId },
     include: {
-      levels: {
+      CourseLevel: {
         include: {
-          lessons: {
+          Lesson: {
             include: {
-              progress: {
+              LessonProgress: {
                 where: { userId },
               },
             },
           },
-          quizzes: true,
+          Quiz: true,
         },
       },
     },
@@ -63,24 +63,24 @@ export async function calculateCourseProgress(
 
   const levelProgress: LevelProgress[] = [];
 
-  for (const level of course.levels) {
-    const levelLessons = level.lessons.length;
-    const levelCompleted = level.lessons.filter(
-      (l: any) => l.progress.length > 0 && l.progress[0].completed
+  for (const level of course.CourseLevel) {
+    const levelLessons = level.Lesson.length;
+    const levelCompleted = level.Lesson.filter(
+      (l: any) => l.LessonProgress.length > 0 && l.LessonProgress[0].completed
     ).length;
 
     totalLessons += levelLessons;
     completedLessons += levelCompleted;
 
     // Calculate time spent
-    level.lessons.forEach((lesson: any) => {
-      if (lesson.progress.length > 0) {
-        totalTimeSpent += lesson.progress[0].timeSpent || 0;
+    level.Lesson.forEach((lesson: any) => {
+      if (lesson.LessonProgress.length > 0) {
+        totalTimeSpent += lesson.LessonProgress[0].timeSpent || 0;
       }
     });
 
     // Count quizzes
-    const levelQuizzes = level.quizzes.length;
+    const levelQuizzes = level.Quiz.length;
     totalQuizzes += levelQuizzes;
 
     levelProgress.push({
@@ -94,8 +94,8 @@ export async function calculateCourseProgress(
   }
 
   // Get quiz attempts
-  const quizIds = course.levels
-    .flatMap((l: any) => l.quizzes)
+  const quizIds = course.CourseLevel
+    .flatMap((l: any) => l.Quiz)
     .map((q: any) => q.id);
 
   if (quizIds.length > 0) {
@@ -133,7 +133,7 @@ export async function calculateCourseProgress(
   return {
     overallCompletion,
     levelsCompleted,
-    totalLevels: course.levels.length,
+    totalLevels: course.CourseLevel.length,
     lessonsCompleted: completedLessons,
     totalLessons,
     quizzesPassed: passedQuizzes,
@@ -154,9 +154,9 @@ export async function calculateLevelProgress(
   const level = await prisma.courseLevel.findUnique({
     where: { id: levelId },
     include: {
-      lessons: {
+      Lesson: {
         include: {
-          progress: {
+          LessonProgress: {
             where: { userId },
           },
         },
@@ -168,9 +168,9 @@ export async function calculateLevelProgress(
     throw new Error(`Level ${levelId} not found`);
   }
 
-  const totalLessons = level.lessons.length;
-  const completedLessons = level.lessons.filter(
-    (l) => l.progress.length > 0 && l.progress[0].completed
+  const totalLessons = level.Lesson.length;
+  const completedLessons = level.Lesson.filter(
+    (l) => l.LessonProgress.length > 0 && l.LessonProgress[0].completed
   ).length;
 
   return {

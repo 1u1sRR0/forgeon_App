@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,10 +42,12 @@ export async function POST(request: NextRequest) {
 
     const project = await prisma.project.create({
       data: {
+        id: crypto.randomUUID(),
         userId: session.user.id,
         name,
         description: description || '',
         state: 'IDEA',
+        updatedAt: new Date(),
       },
     });
 

@@ -4,6 +4,27 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { calculateLevelProgress } from '@/modules/courseEngine/progressTracker';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformLevelResponse(level: any) {
+  if (!level) return level;
+  const quiz = level.Quiz?.[0];
+  return {
+    id: level.id,
+    title: level.title,
+    description: level.description,
+    order: level.levelNumber,
+    learningObjectives: Array.isArray(level.objectives) ? level.objectives : [],
+    lessons: (level.Lesson || []).map((lesson: any) => ({
+      id: lesson.id,
+      title: lesson.title,
+      description: lesson.description,
+      order: lesson.lessonNumber,
+      estimatedMinutes: lesson.estimatedMinutes,
+      quiz: quiz ? { id: quiz.id } : undefined,
+    })),
+  };
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; levelId: string }> }
@@ -32,16 +53,15 @@ export async function GET(
     const level = await prisma.courseLevel.findFirst({
       where: {
         id: levelId,
-        course: {
+        Course: {
           projectId,
         },
       },
       include: {
-        lessons: {
+        Lesson: {
           orderBy: { lessonNumber: 'asc' },
-          include: {
-          },
         },
+        Quiz: true,
       },
     });
 
@@ -53,7 +73,7 @@ export async function GET(
     const progress = await calculateLevelProgress(levelId, session.user.id);
 
     return NextResponse.json({
-      level,
+      level: transformLevelResponse(level),
       progress,
     });
   } catch (error) {

@@ -4,6 +4,39 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { generateCourse } from '@/modules/courseEngine/courseGenerator';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformCourseResponse(course: any) {
+  if (!course) return course;
+  return {
+    id: course.id,
+    title: course.title,
+    description: course.description,
+    levels: (course.CourseLevel || []).map((level: any) => ({
+      id: level.id,
+      title: level.title,
+      description: level.description,
+      order: level.levelNumber,
+      learningObjectives: Array.isArray(level.objectives) ? level.objectives : [],
+      lessons: (level.Lesson || []).map((lesson: any) => ({
+        id: lesson.id,
+        title: lesson.title,
+        description: lesson.description,
+        order: lesson.lessonNumber,
+        estimatedMinutes: lesson.estimatedMinutes,
+        content: lesson.content || [],
+        quiz: level.Quiz?.[0]
+          ? {
+              id: level.Quiz[0].id,
+              title: level.Quiz[0].title,
+              passingScore: level.Quiz[0].passingScore,
+              questions: level.Quiz[0].questions || [],
+            }
+          : undefined,
+      })),
+    })),
+  };
+}
+
 // GET /api/projects/[id]/course - Get or generate course
 export async function GET(
   request: NextRequest,
@@ -29,20 +62,31 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check if regeneration is requested
+    const { searchParams } = new URL(request.url);
+    const regenerate = searchParams.get('regenerate') === 'true';
+
+    if (regenerate) {
+      // Delete existing course to regenerate
+      await prisma.course.deleteMany({ where: { projectId } });
+    }
+
     // Check if course exists
     let course = await prisma.course.findUnique({
       where: { projectId },
       include: {
-        levels: {
+        CourseLevel: {
+          orderBy: { levelNumber: 'asc' },
           include: {
-            lessons: {
+            Lesson: {
+              orderBy: { lessonNumber: 'asc' },
               include: {
-                progress: {
+                LessonProgress: {
                   where: { userId: session.user.id },
                 },
               },
             },
-            quizzes: true,
+            Quiz: true,
           },
         },
       },
@@ -55,16 +99,18 @@ export async function GET(
         course = await prisma.course.findUnique({
           where: { projectId },
           include: {
-            levels: {
+            CourseLevel: {
+              orderBy: { levelNumber: 'asc' },
               include: {
-                lessons: {
+                Lesson: {
+                  orderBy: { lessonNumber: 'asc' },
                   include: {
-                    progress: {
+                    LessonProgress: {
                       where: { userId: session.user.id },
                     },
                   },
                 },
-                quizzes: true,
+                Quiz: true,
               },
             },
           },
@@ -78,7 +124,7 @@ export async function GET(
       }
     }
 
-    return NextResponse.json(course);
+    return NextResponse.json(transformCourseResponse(course));
   } catch (error) {
     console.error('Error fetching course:', error);
     return NextResponse.json(

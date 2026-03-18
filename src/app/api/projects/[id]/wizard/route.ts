@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import crypto from 'crypto';
 import { validateField, checkWizardCompletion } from '@/modules/wizard/validation';
 
 // GET /api/projects/[id]/wizard - Get all wizard answers
@@ -115,11 +116,13 @@ export async function POST(
         completed: value !== null && value.trim() !== '',
       },
       create: {
+        id: crypto.randomUUID(),
         projectId: id,
         step,
         key,
         value,
         completed: value !== null && value.trim() !== '',
+        updatedAt: new Date(),
       },
     });
 

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { buildService } from '@/modules/build/buildService';
 import { BuildParameters } from '@/modules/build/types';
 
-// POST /api/projects/[id]/build - Initiate build
+// POST /api/projects/[id]/build - Initiate async build
 export async function POST(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -21,12 +21,24 @@ export async function POST(
     const project = await prisma.project.findFirst({
       where: {
         id: params.id,
-        user: { email: session.user.email },
+        User: { email: session.user.email },
       },
     });
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    // Validate build gate before creating artifact
+    const validation = await buildService.validateBuildGate(params.id);
+    if (!validation.isValid) {
+      return NextResponse.json(
+        {
+          error: 'Build gate validation failed',
+          validation,
+        },
+        { status: 400 }
+      );
     }
 
     // Parse build parameters
@@ -38,12 +50,10 @@ export async function POST(
       featureFlags: body.featureFlags,
     };
 
-    // Create build job
+    // Create build job with PENDING status
     const buildJob = await buildService.createBuildJob(params.id, parameters);
 
-    // Trigger async build process
-    // Note: In production, this should be done via a job queue
-    // For now, we'll execute it asynchronously without blocking the response
+    // Execute BuildExecutor asynchronously (fire-and-forget with error handling)
     import('@/modules/build/buildExecutor').then(({ BuildExecutor }) => {
       const executor = new BuildExecutor(
         buildJob.id,
@@ -52,12 +62,19 @@ export async function POST(
         parameters
       );
       executor.execute().catch((error) => {
-        console.error('Build execution error:', error);
+        console.error(`[Build ${buildJob.id}] Async execution error:`, error);
       });
+    }).catch((error) => {
+      console.error(`[Build ${buildJob.id}] Failed to import BuildExecutor:`, error);
     });
+
+    // Return buildId and redirect URL to progress page
+    const redirectUrl = `/dashboard/projects/${params.id}/build/progress`;
 
     return NextResponse.json({
       success: true,
+      buildId: buildJob.id,
+      redirectUrl,
       buildJob,
     });
   } catch (error: any) {
@@ -85,7 +102,7 @@ export async function GET(
     const project = await prisma.project.findFirst({
       where: {
         id: params.id,
-        user: { email: session.user.email },
+        User: { email: session.user.email },
       },
     });
 
@@ -93,16 +110,27 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // Get latest build
+    // Query most recent BuildArtifact for the project
     const buildJob = await buildService.getLatestBuild(params.id);
 
     if (!buildJob) {
-      return NextResponse.json({ error: 'No build found' }, { status: 404 });
+      return NextResponse.json({ error: 'No build found for this project' }, { status: 404 });
     }
 
-    return NextResponse.json({ buildJob });
+    // Return current BuildArtifact status, buildLog array, errorMessage, and zipPath
+    return NextResponse.json({
+      buildId: buildJob.id,
+      status: buildJob.status,
+      buildLog: buildJob.buildLog,
+      errorMessage: buildJob.errorMessage || null,
+      zipPath: buildJob.zipPath || null,
+      qualityChecksPassed: buildJob.qualityChecksPassed,
+      templateType: buildJob.templateType,
+      createdAt: buildJob.createdAt,
+      completedAt: buildJob.completedAt || null,
+    });
   } catch (error: any) {
-    console.error('Get build error:', error);
+    console.error('Get build status error:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to get build status' },
       { status: 500 }

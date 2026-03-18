@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { buildService } from '@/modules/build/buildService';
 
-// GET /api/projects/[id]/build/validate - Validate build gate
+// GET /api/projects/[id]/build/validate - Validate build gate without creating a BuildArtifact
 export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
@@ -20,7 +20,7 @@ export async function GET(
     const project = await prisma.project.findFirst({
       where: {
         id: params.id,
-        user: { email: session.user.email },
+        User: { email: session.user.email },
       },
     });
 
@@ -28,10 +28,15 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
-    // Validate build gate
+    // Run build gate validation without creating a BuildArtifact
     const validation = await buildService.validateBuildGate(params.id);
 
-    return NextResponse.json({ validation });
+    // Return validation result (passed/failed with reasons)
+    return NextResponse.json({
+      passed: validation.isValid,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    });
   } catch (error: any) {
     console.error('Build validation error:', error);
     return NextResponse.json(

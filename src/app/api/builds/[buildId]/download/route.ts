@@ -21,9 +21,9 @@ export async function GET(
     const buildArtifact = await prisma.buildArtifact.findUnique({
       where: { id: params.buildId },
       include: {
-        project: {
+        Project: {
           include: {
-            user: true,
+            User: true,
           },
         },
       },
@@ -34,14 +34,22 @@ export async function GET(
     }
 
     // Verify user owns the project
-    if (buildArtifact.project.user.email !== session.user.email) {
+    if ((buildArtifact as any).Project?.User?.email !== session.user.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Verify build status is COMPLETED
+    // Verify build status is COMPLETED before serving ZIP
     if (buildArtifact.status !== 'COMPLETED') {
+      const statusMessages: Record<string, string> = {
+        PENDING: 'Build has not started yet. Please wait for the build to complete before downloading.',
+        IN_PROGRESS: 'Build is still in progress. Please wait for the build to complete before downloading.',
+        FAILED: 'Build failed and cannot be downloaded. Check the build logs for error details.',
+      };
+      const message = statusMessages[buildArtifact.status]
+        || `Build is not ready for download (current status: ${buildArtifact.status}).`;
+
       return NextResponse.json(
-        { error: `Build is not ready for download (status: ${buildArtifact.status})` },
+        { error: message, status: buildArtifact.status },
         { status: 400 }
       );
     }
@@ -49,7 +57,7 @@ export async function GET(
     // Verify quality checks passed
     if (!buildArtifact.qualityChecksPassed) {
       return NextResponse.json(
-        { error: 'Build did not pass quality checks' },
+        { error: 'Build did not pass quality checks and cannot be downloaded.' },
         { status: 400 }
       );
     }
@@ -57,7 +65,7 @@ export async function GET(
     // Verify ZIP path exists
     if (!buildArtifact.zipPath) {
       return NextResponse.json(
-        { error: 'ZIP file path not found' },
+        { error: 'ZIP file path not found. The build may have completed without generating a package.' },
         { status: 404 }
       );
     }
@@ -65,7 +73,7 @@ export async function GET(
     // Prevent path traversal attacks
     const zipPath = path.resolve(buildArtifact.zipPath);
     const buildsRoot = path.resolve(process.cwd(), 'builds');
-    
+
     if (!zipPath.startsWith(buildsRoot)) {
       console.error('Path traversal attempt detected:', zipPath);
       return NextResponse.json(
@@ -77,7 +85,7 @@ export async function GET(
     // Verify file exists
     if (!fs.existsSync(zipPath)) {
       return NextResponse.json(
-        { error: 'ZIP file not found on server' },
+        { error: 'ZIP file not found on server. It may have been cleaned up.' },
         { status: 404 }
       );
     }
@@ -87,7 +95,7 @@ export async function GET(
     const fileSize = stats.size;
 
     // Generate filename
-    const projectName = buildArtifact.project.name
+    const projectName = ((buildArtifact as any).Project?.name || 'project')
       .toLowerCase()
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '');
@@ -95,7 +103,7 @@ export async function GET(
 
     // Stream the file
     const fileStream = fs.createReadStream(zipPath);
-    
+
     // Convert Node.js stream to Web ReadableStream
     const readableStream = new ReadableStream({
       start(controller) {

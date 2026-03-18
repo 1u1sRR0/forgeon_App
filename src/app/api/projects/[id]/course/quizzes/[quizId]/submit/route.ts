@@ -41,8 +41,8 @@ export async function POST(
     const quiz = await prisma.quiz.findFirst({
       where: {
         id: quizId,
-        level: {
-          course: {
+        CourseLevel: {
+          Course: {
             projectId,
           },
         },

@@ -8,6 +8,9 @@ import { AppFilesGenerator } from './templates/appFiles';
 import { AuthPagesGenerator } from './templates/authPages';
 import { ApiRoutesGenerator } from './templates/apiRoutes';
 import { DashboardPagesGenerator } from './templates/dashboardPages';
+import { MarketplaceGenerator } from './templates/marketplaceFiles';
+import { EcommerceGenerator } from './templates/ecommerceFiles';
+import { LandingBlogGenerator } from './templates/landingBlogFiles';
 import { buildService } from './buildService';
 import { QualityGates } from './qualityGates';
 import { ZipPackager } from './zipPackager';
@@ -154,23 +157,92 @@ export class BuildExecutor {
       this.log('Generating register API route...');
       this.writeFile('src/app/api/auth/register/route.ts', ApiRoutesGenerator.generateRegisterRoute());
 
-      const entityNamePlural = this.parameters.entityName.toLowerCase() + 's';
-      this.log(`Generating ${entityNamePlural} API routes...`);
-      this.writeFile(`src/app/api/${entityNamePlural}/route.ts`, ApiRoutesGenerator.generateEntityRoute(this.parameters));
-      this.writeFile(`src/app/api/${entityNamePlural}/[id]/route.ts`, ApiRoutesGenerator.generateEntityIdRoute(this.parameters));
+      // Generate template-specific files
+      switch (this.templateType) {
+        case 'MARKETPLACE_MINI':
+          this.log('Generating marketplace Prisma schema...');
+          this.writeFile('prisma/schema.prisma', MarketplaceGenerator.generatePrismaSchema(this.parameters));
 
-      // Generate dashboard pages
-      this.log('Generating dashboard page...');
-      this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
+          this.log('Generating marketplace API routes...');
+          this.writeFile('src/app/api/listings/route.ts', MarketplaceGenerator.generateListingsRoute(this.parameters));
+          this.writeFile('src/app/api/listings/[id]/route.ts', MarketplaceGenerator.generateListingIdRoute(this.parameters));
+          this.writeFile('src/app/api/listings/search/route.ts', MarketplaceGenerator.generateSearchRoute(this.parameters));
+          this.writeFile('src/app/api/transactions/route.ts', MarketplaceGenerator.generateTransactionsRoute(this.parameters));
 
-      this.log(`Generating new ${this.parameters.entityName.toLowerCase()} page...`);
-      this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/new/page.tsx`, DashboardPagesGenerator.generateNewEntityPage(this.parameters));
+          this.log('Generating marketplace UI pages...');
+          this.writeFile('src/app/(dashboard)/dashboard/listings/page.tsx', MarketplaceGenerator.generateListingsPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/listings/[id]/page.tsx', MarketplaceGenerator.generateListingDetailPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/listings/publish/page.tsx', MarketplaceGenerator.generatePublishListingPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/seller/page.tsx', MarketplaceGenerator.generateSellerDashboardPage(this.parameters));
 
-      this.log(`Generating view ${this.parameters.entityName.toLowerCase()} page...`);
-      this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/page.tsx`, DashboardPagesGenerator.generateViewEntityPage(this.parameters));
+          this.log('Generating marketplace dashboard page...');
+          this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
+          break;
 
-      this.log(`Generating edit ${this.parameters.entityName.toLowerCase()} page...`);
-      this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/edit/page.tsx`, DashboardPagesGenerator.generateEditEntityPage(this.parameters));
+        case 'ECOMMERCE_MINI':
+          this.log('Generating e-commerce Prisma schema...');
+          this.writeFile('prisma/schema.prisma', EcommerceGenerator.generatePrismaSchema(this.parameters));
+
+          this.log('Generating e-commerce API routes...');
+          this.writeFile('src/app/api/products/route.ts', EcommerceGenerator.generateProductsRoute(this.parameters));
+          this.writeFile('src/app/api/products/[id]/route.ts', EcommerceGenerator.generateProductIdRoute(this.parameters));
+          this.writeFile('src/app/api/cart/route.ts', EcommerceGenerator.generateCartRoute(this.parameters));
+          this.writeFile('src/app/api/orders/route.ts', EcommerceGenerator.generateOrdersRoute(this.parameters));
+
+          this.log('Generating e-commerce UI pages...');
+          this.writeFile('src/app/(dashboard)/dashboard/catalog/page.tsx', EcommerceGenerator.generateCatalogPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/catalog/[id]/page.tsx', EcommerceGenerator.generateProductDetailPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/cart/page.tsx', EcommerceGenerator.generateCartPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/checkout/page.tsx', EcommerceGenerator.generateCheckoutPage(this.parameters));
+
+          this.log('Generating e-commerce dashboard page...');
+          this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
+          break;
+
+        case 'LANDING_BLOG':
+          this.log('Generating landing+blog Prisma schema...');
+          this.writeFile('prisma/schema.prisma', LandingBlogGenerator.generatePrismaSchema(this.parameters));
+
+          this.log('Generating landing+blog API routes...');
+          this.writeFile('src/app/api/posts/route.ts', LandingBlogGenerator.generatePostsRoute(this.parameters));
+          this.writeFile('src/app/api/posts/[id]/route.ts', LandingBlogGenerator.generatePostIdRoute(this.parameters));
+          this.writeFile('src/app/api/categories/route.ts', LandingBlogGenerator.generateCategoriesRoute(this.parameters));
+          this.writeFile('src/app/api/contact/route.ts', LandingBlogGenerator.generateContactRoute(this.parameters));
+
+          this.log('Generating landing+blog UI pages...');
+          this.writeFile('src/app/page.tsx', LandingBlogGenerator.generateLandingPage(this.parameters));
+          this.writeFile('src/app/blog/page.tsx', LandingBlogGenerator.generateBlogListPage(this.parameters));
+          this.writeFile('src/app/blog/[slug]/page.tsx', LandingBlogGenerator.generateBlogPostPage(this.parameters));
+          this.writeFile('src/app/contacto/page.tsx', LandingBlogGenerator.generateContactPage(this.parameters));
+
+          this.log('Generating SEO components...');
+          this.writeFile('src/components/SeoHead.tsx', LandingBlogGenerator.generateSeoComponents(this.parameters));
+
+          this.log('Generating landing+blog dashboard page...');
+          this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
+          break;
+
+        default: {
+          // SAAS_BASIC - existing behavior
+          const entityNamePlural = this.parameters.entityName.toLowerCase() + 's';
+          this.log(`Generating ${entityNamePlural} API routes...`);
+          this.writeFile(`src/app/api/${entityNamePlural}/route.ts`, ApiRoutesGenerator.generateEntityRoute(this.parameters));
+          this.writeFile(`src/app/api/${entityNamePlural}/[id]/route.ts`, ApiRoutesGenerator.generateEntityIdRoute(this.parameters));
+
+          this.log('Generating dashboard page...');
+          this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
+
+          this.log(`Generating new ${this.parameters.entityName.toLowerCase()} page...`);
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/new/page.tsx`, DashboardPagesGenerator.generateNewEntityPage(this.parameters));
+
+          this.log(`Generating view ${this.parameters.entityName.toLowerCase()} page...`);
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/page.tsx`, DashboardPagesGenerator.generateViewEntityPage(this.parameters));
+
+          this.log(`Generating edit ${this.parameters.entityName.toLowerCase()} page...`);
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/edit/page.tsx`, DashboardPagesGenerator.generateEditEntityPage(this.parameters));
+          break;
+        }
+      }
 
       // Generate SessionProvider wrapper
       this.log('Generating SessionProvider...');
@@ -187,7 +259,7 @@ export class BuildExecutor {
       this.log('Running quality gates...');
       await this.updateStatus('IN_PROGRESS');
       
-      const qualityGates = new QualityGates(this.buildDir, this.parameters.entityName);
+      const qualityGates = new QualityGates(this.buildDir, this.parameters.entityName, this.templateType);
       const qualityResult = await qualityGates.runChecks();
 
       // Log quality check results

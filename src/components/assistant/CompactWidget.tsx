@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Maximize2, Send, Bot, User, Loader2 } from 'lucide-react';
+import { X, Maximize2, Send, Bot, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface CompactWidgetProps {
   onClose: () => void;
+  isVisible: boolean;
+  onAnimationEnd?: () => void;
 }
 
 interface Message {
@@ -14,7 +16,7 @@ interface Message {
   content: string;
 }
 
-export default function CompactWidget({ onClose }: CompactWidgetProps) {
+export default function CompactWidget({ onClose, isVisible, onAnimationEnd }: CompactWidgetProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -22,6 +24,7 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     initConversation();
@@ -31,8 +34,11 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleTransitionEnd = () => {
+    onAnimationEnd?.();
+  };
+
   const initConversation = async () => {
-    // Try to reuse last widget conversation
     const savedId = localStorage.getItem('widgetConversationId');
     if (savedId) {
       try {
@@ -45,7 +51,6 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
         }
       } catch {}
     }
-    // Create new
     await createNewConversation();
   };
 
@@ -113,10 +118,17 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
 
   return (
     <div
-      className="fixed bottom-24 right-6 w-[380px] h-[520px] rounded-2xl shadow-2xl shadow-black/50 flex flex-col z-40 overflow-hidden border"
+      ref={panelRef}
+      onTransitionEnd={handleTransitionEnd}
+      className={`fixed bottom-24 right-6 w-[380px] h-[520px] rounded-2xl shadow-2xl shadow-black/50 flex flex-col z-40 overflow-hidden border max-md:bottom-0 max-md:right-0 max-md:w-full max-md:h-full max-md:rounded-none ${
+        isVisible ? 'translate-x-0' : 'translate-x-[110%]'
+      }`}
       style={{
         background: 'var(--bg-secondary, #111118)',
         borderColor: 'var(--border-subtle, #1e1e2e)',
+        transition: isVisible
+          ? 'transform 300ms ease-out'
+          : 'transform 200ms ease-in',
       }}
     >
       {/* Header */}
@@ -129,14 +141,14 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
           <button
             onClick={() => { router.push('/dashboard/assistant'); onClose(); }}
             className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-all"
-            aria-label="Open full page"
+            aria-label="Abrir página completa"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-all"
-            aria-label="Close"
+            aria-label="Cerrar"
           >
             <X className="w-4 h-4" />
           </button>
@@ -148,7 +160,7 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
         {messages.length === 0 && !sending && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Bot className="w-10 h-10 text-purple-400/40 mb-3" />
-            <p className="text-gray-500 text-xs">Ask me anything about your projects or Forgeon</p>
+            <p className="text-gray-500 text-xs">Pregúntame lo que quieras sobre tus proyectos o Forgeon</p>
           </div>
         )}
 
@@ -202,7 +214,7 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendMessage(); } }}
-            placeholder="Ask me anything..."
+            placeholder="Pregúntame lo que quieras..."
             className="flex-1 px-3 py-2 rounded-lg text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-purple-500/50"
             style={{ background: 'var(--bg-elevated, #16161f)', border: '1px solid var(--border-subtle, #1e1e2e)' }}
           />
@@ -211,7 +223,7 @@ export default function CompactWidget({ onClose }: CompactWidgetProps) {
             disabled={!input.trim() || sending}
             className="p-2 rounded-lg text-white transition-all disabled:opacity-30 hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
-            aria-label="Send"
+            aria-label="Enviar"
           >
             <Send className="w-3.5 h-3.5" />
           </button>

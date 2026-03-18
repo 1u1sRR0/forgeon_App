@@ -18,6 +18,14 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
     onChange('I don\'t know');
   };
 
+  const baseInputClasses = `
+    w-full px-4 py-3 text-base rounded-lg
+    bg-white/5 border text-white placeholder-gray-500
+    transition-all duration-150
+    focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50
+    ${error ? 'border-red-500/70' : 'border-white/10'}
+  `;
+
   const renderInput = () => {
     switch (field.type) {
       case 'text':
@@ -27,9 +35,7 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
             value={value || ''}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
-            className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={baseInputClasses}
           />
         );
 
@@ -40,9 +46,7 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
             rows={6}
-            className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`${baseInputClasses} min-h-[120px]`}
           />
         );
 
@@ -51,13 +55,11 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
           <select
             value={value || ''}
             onChange={(e) => handleChange(e.target.value)}
-            className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={baseInputClasses}
           >
-            <option value="">Select an option...</option>
+            <option value="" className="bg-gray-900 text-gray-400">Selecciona una opción...</option>
             {field.options?.map((option) => (
-              <option key={option.value} value={option.value}>
+              <option key={option.value} value={option.value} className="bg-gray-900 text-white">
                 {option.label}
               </option>
             ))}
@@ -68,16 +70,16 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
         return (
           <div className="space-y-2">
             {field.options?.map((option) => (
-              <label key={option.value} className="flex items-center space-x-2">
+              <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="radio"
                   name={field.key}
                   value={option.value}
                   checked={value === option.value}
                   onChange={(e) => handleChange(e.target.value)}
-                  className="text-blue-600 focus:ring-blue-500"
+                  className="text-purple-600 focus:ring-purple-500 bg-white/5 border-white/20"
                 />
-                <span className="text-gray-700">{option.label}</span>
+                <span className="text-gray-300">{option.label}</span>
               </label>
             ))}
           </div>
@@ -90,9 +92,7 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
             value={value || ''}
             onChange={(e) => handleChange(e.target.value)}
             placeholder={field.placeholder}
-            className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={baseInputClasses}
           />
         );
 
@@ -102,32 +102,32 @@ export function WizardField({ field, value, onChange, error }: WizardFieldProps)
   };
 
   return (
-    <div className="mb-6">
+    <div>
       <label className="block mb-2">
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-gray-300">
           {field.label}
-          {field.required && <span className="text-red-500 ml-1">*</span>}
+          {field.required && <span className="text-purple-400 ml-1">*</span>}
         </span>
       </label>
 
       {renderInput()}
 
       {field.helpText && (
-        <p className="mt-1 text-sm text-gray-500">{field.helpText}</p>
+        <p className="mt-1.5 text-sm text-gray-500">{field.helpText}</p>
       )}
 
       {field.allowDontKnow && value !== 'I don\'t know' && (
         <button
           type="button"
           onClick={handleDontKnow}
-          className="mt-2 text-sm text-blue-600 hover:text-blue-700"
+          className="mt-2 text-sm text-purple-400 hover:text-purple-300 transition-colors duration-150"
         >
-          I don't know
+          No lo sé
         </button>
       )}
 
       {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
+        <p className="mt-1.5 text-sm text-red-400">{error}</p>
       )}
     </div>
   );

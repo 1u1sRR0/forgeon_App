@@ -43,6 +43,10 @@ export default function LevelDetailPage({
     const fetchLevel = async () => {
       try {
         const response = await fetch(`/api/projects/${projectId}/course/levels/${levelId}`);
+        if (!response.ok) {
+          console.error('Error fetching level: status', response.status);
+          return;
+        }
         const data = await response.json();
         setLevel(data.level);
         setProgress(data.progress);
@@ -67,7 +71,7 @@ export default function LevelDetailPage({
   if (!level) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Level not found</p>
+        <p className="text-gray-400">Nivel no encontrado</p>
       </div>
     );
   }
@@ -80,13 +84,13 @@ export default function LevelDetailPage({
         className="flex items-center gap-2 text-gray-400 hover:text-white mb-6"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to Course
+        Volver al Curso
       </button>
 
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <span className="text-blue-500 font-bold">Level {level.order}</span>
+          <span className="text-blue-500 font-bold">Nivel {level.order}</span>
           <h1 className="text-3xl font-bold text-white">{level.title}</h1>
         </div>
         <p className="text-gray-400 mb-4">{level.description}</p>
@@ -95,7 +99,7 @@ export default function LevelDetailPage({
         {progress && (
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Progress</span>
+              <span className="text-sm text-gray-400">Progreso</span>
               <span className="text-sm font-bold text-white">{progress.percentage}%</span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-2">
@@ -105,7 +109,7 @@ export default function LevelDetailPage({
               />
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              {progress.completedLessons} of {progress.totalLessons} lessons completed
+              {progress.completedLessons} de {progress.totalLessons} lecciones completadas
             </p>
           </div>
         )}
@@ -113,7 +117,7 @@ export default function LevelDetailPage({
 
       {/* Learning Objectives */}
       <div className="mb-8">
-        <h2 className="text-xl font-bold text-white mb-4">Learning Objectives</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Objetivos de Aprendizaje</h2>
         <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
           <ul className="space-y-3">
             {level.learningObjectives.map((objective, idx) => (
@@ -128,7 +132,7 @@ export default function LevelDetailPage({
 
       {/* Lessons List */}
       <div>
-        <h2 className="text-xl font-bold text-white mb-4">Lessons</h2>
+        <h2 className="text-xl font-bold text-white mb-4">Lecciones</h2>
         <div className="space-y-3">
           {level.lessons.map((lesson) => (
             <div
@@ -152,7 +156,7 @@ export default function LevelDetailPage({
                       {lesson.quiz && (
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-3 h-3" />
-                          Quiz included
+                          Incluye quiz
                         </span>
                       )}
                     </div>

@@ -81,7 +81,7 @@ export default function LessonPage({
   if (!lesson) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-gray-400">Lesson not found</p>
+        <p className="text-gray-400">Lección no encontrada</p>
       </div>
     );
   }
@@ -94,14 +94,14 @@ export default function LessonPage({
           onClick={() => router.push(`/dashboard/projects/${projectId}/course`)}
           className="hover:text-white"
         >
-          Course
+          Curso
         </button>
         <span>/</span>
         <button
           onClick={() => router.push(`/dashboard/projects/${projectId}/course/levels/${lesson.level.id}`)}
           className="hover:text-white"
         >
-          Level {lesson.level.order}
+          Nivel {lesson.level.order}
         </button>
         <span>/</span>
         <span className="text-white">{lesson.title}</span>
@@ -114,12 +114,12 @@ export default function LessonPage({
         <div className="flex items-center gap-4 text-sm text-gray-500">
           <span className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            {lesson.estimatedMinutes} minutes
+            {lesson.estimatedMinutes} minutos
           </span>
           {completed && (
             <span className="flex items-center gap-1 text-green-500">
               <CheckCircle className="w-4 h-4" />
-              Completed
+              Completada
             </span>
           )}
         </div>
@@ -137,7 +137,7 @@ export default function LessonPage({
           className="flex items-center gap-2 text-gray-400 hover:text-white"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Level
+          Volver al Nivel
         </button>
 
         <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export default function LessonPage({
               disabled={marking}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {marking ? 'Marking...' : 'Mark as Complete'}
+              {marking ? 'Guardando...' : 'Marcar como Completada'}
             </button>
           )}
           {lesson.quiz && (
@@ -155,7 +155,7 @@ export default function LessonPage({
               onClick={() => router.push(`/dashboard/projects/${projectId}/course/quizzes/${lesson.quiz!.id}`)}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Take Quiz
+              Hacer Quiz
             </button>
           )}
         </div>

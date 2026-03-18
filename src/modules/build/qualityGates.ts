@@ -2,15 +2,17 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { QualityCheckResult } from './types';
+import { QualityCheckResult, TemplateType } from './types';
 
 export class QualityGates {
   private buildDir: string;
   private entityName: string;
+  private templateType: TemplateType;
 
-  constructor(buildDir: string, entityName: string) {
+  constructor(buildDir: string, entityName: string, templateType: TemplateType = 'SAAS_BASIC') {
     this.buildDir = buildDir;
     this.entityName = entityName;
+    this.templateType = templateType;
   }
 
   /**
@@ -186,6 +188,19 @@ export class QualityGates {
         : '✗ Build directory is empty',
     });
 
+    // Template-specific checks
+    switch (this.templateType) {
+      case 'MARKETPLACE_MINI':
+        checks.push(...this.checkMarketplaceFiles());
+        break;
+      case 'ECOMMERCE_MINI':
+        checks.push(...this.checkEcommerceFiles());
+        break;
+      case 'LANDING_BLOG':
+        checks.push(...this.checkLandingBlogFiles());
+        break;
+    }
+
     // Determine overall pass/fail
     const allPassed = checks.every((check) => check.passed);
 
@@ -193,5 +208,84 @@ export class QualityGates {
       passed: allPassed,
       checks,
     };
+  }
+
+  /**
+   * Check that a file exists and is non-empty
+   */
+  private checkFileExistsAndNonEmpty(relativePath: string): { name: string; passed: boolean; message: string } {
+    const filePath = path.join(this.buildDir, relativePath);
+    const exists = fs.existsSync(filePath);
+    if (!exists) {
+      return {
+        name: `Template file: ${relativePath}`,
+        passed: false,
+        message: `✗ ${relativePath} missing`,
+      };
+    }
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const nonEmpty = content.trim().length > 0;
+    return {
+      name: `Template file: ${relativePath}`,
+      passed: nonEmpty,
+      message: nonEmpty
+        ? `✓ ${relativePath} found and non-empty`
+        : `✗ ${relativePath} exists but is empty`,
+    };
+  }
+
+  /**
+   * Validate marketplace-specific files exist and are non-empty
+   */
+  private checkMarketplaceFiles(): Array<{ name: string; passed: boolean; message: string }> {
+    const marketplaceFiles = [
+      'prisma/schema.prisma',
+      'src/app/api/listings/route.ts',
+      'src/app/api/listings/[id]/route.ts',
+      'src/app/api/listings/search/route.ts',
+      'src/app/api/transactions/route.ts',
+      'src/app/(dashboard)/dashboard/listings/page.tsx',
+      'src/app/(dashboard)/dashboard/listings/[id]/page.tsx',
+      'src/app/(dashboard)/dashboard/listings/publish/page.tsx',
+      'src/app/(dashboard)/dashboard/seller/page.tsx',
+    ];
+    return marketplaceFiles.map((file) => this.checkFileExistsAndNonEmpty(file));
+  }
+
+  /**
+   * Validate e-commerce-specific files exist and are non-empty
+   */
+  private checkEcommerceFiles(): Array<{ name: string; passed: boolean; message: string }> {
+    const ecommerceFiles = [
+      'prisma/schema.prisma',
+      'src/app/api/products/route.ts',
+      'src/app/api/products/[id]/route.ts',
+      'src/app/api/cart/route.ts',
+      'src/app/api/orders/route.ts',
+      'src/app/(dashboard)/dashboard/catalog/page.tsx',
+      'src/app/(dashboard)/dashboard/catalog/[id]/page.tsx',
+      'src/app/(dashboard)/dashboard/cart/page.tsx',
+      'src/app/(dashboard)/dashboard/checkout/page.tsx',
+    ];
+    return ecommerceFiles.map((file) => this.checkFileExistsAndNonEmpty(file));
+  }
+
+  /**
+   * Validate landing+blog-specific files exist and are non-empty
+   */
+  private checkLandingBlogFiles(): Array<{ name: string; passed: boolean; message: string }> {
+    const landingBlogFiles = [
+      'prisma/schema.prisma',
+      'src/app/api/posts/route.ts',
+      'src/app/api/posts/[id]/route.ts',
+      'src/app/api/categories/route.ts',
+      'src/app/api/contact/route.ts',
+      'src/app/page.tsx',
+      'src/app/blog/page.tsx',
+      'src/app/blog/[slug]/page.tsx',
+      'src/app/contacto/page.tsx',
+      'src/components/SeoHead.tsx',
+    ];
+    return landingBlogFiles.map((file) => this.checkFileExistsAndNonEmpty(file));
   }
 }
