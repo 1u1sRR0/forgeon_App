@@ -338,6 +338,51 @@ export default function ProjectDetailPage() {
         </button>
       </div>
 
+      {/* Visual Preview Card */}
+      {hasBlueprints && sessionId && (
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-1">Preview de tu Negocio</h2>
+          <p className="text-sm text-gray-400 mb-4">Vista previa de la landing page generada para tu proyecto</p>
+          <div
+            className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl shadow-purple-500/10 cursor-pointer group"
+            onClick={() => router.push(`/dashboard/generate/${sessionId}/preview`)}
+          >
+            {/* Browser chrome bar */}
+            <div className="px-4 py-2.5 flex items-center gap-3 border-b border-white/10 bg-gray-900/80">
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+              </div>
+              <div className="flex-1 mx-2">
+                <div className="bg-white/5 rounded-lg px-4 py-1 text-xs text-white/30 text-center max-w-xs mx-auto truncate">
+                  {project.name.toLowerCase().replace(/\s+/g, '-')}.app
+                </div>
+              </div>
+            </div>
+            {/* Iframe preview */}
+            <div className="relative h-[400px] bg-white overflow-hidden">
+              <iframe
+                src={`/api/generate/sessions/${sessionId}/preview`}
+                className="w-full h-[800px] border-0 pointer-events-none"
+                style={{ transform: 'scale(0.5)', transformOrigin: 'top left', width: '200%', height: '800px' }}
+                title={`Preview de ${project.name}`}
+                sandbox="allow-scripts allow-same-origin"
+                loading="lazy"
+              />
+            </div>
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+              <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center gap-3">
+                <span className="px-6 py-3 bg-white text-gray-950 rounded-xl font-semibold text-sm shadow-lg flex items-center gap-2">
+                  <Eye className="w-4 h-4" /> Ver Preview
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Blueprints section */}
       {hasBlueprints ? (
         <>

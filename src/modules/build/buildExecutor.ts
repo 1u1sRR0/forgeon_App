@@ -8,13 +8,17 @@ import { AppFilesGenerator } from './templates/appFiles';
 import { AuthPagesGenerator } from './templates/authPages';
 import { ApiRoutesGenerator } from './templates/apiRoutes';
 import { DashboardPagesGenerator } from './templates/dashboardPages';
-import { MarketplaceGenerator } from './templates/marketplaceFiles';
-import { EcommerceGenerator } from './templates/ecommerceFiles';
-import { LandingBlogGenerator } from './templates/landingBlogFiles';
+import { SaasAdvancedTemplate } from './templates/saasAdvanced';
+import { MarketplaceAdvancedTemplate } from './templates/marketplaceAdvanced';
+import { EcommerceAdvancedTemplate } from './templates/ecommerceAdvanced';
+import { LandingBlogAdvancedTemplate } from './templates/landingBlogAdvanced';
+import { SharedComponentsGenerator } from './generators/sharedComponentsGenerator';
 import { buildService } from './buildService';
 import { QualityGates } from './qualityGates';
 import { ZipPackager } from './zipPackager';
 import { prisma } from '@/lib/prisma';
+import { parseUxBlueprint } from '@/modules/premiumEngine/designTokens/designTokenParser';
+import { PremiumBuildIntegration } from '@/modules/premiumEngine/buildIntegration';
 
 export class BuildExecutor {
   private buildId: string;
@@ -157,89 +161,150 @@ export class BuildExecutor {
       this.log('Generating register API route...');
       this.writeFile('src/app/api/auth/register/route.ts', ApiRoutesGenerator.generateRegisterRoute());
 
+      // ═══ SHARED COMPONENTS GENERATION ═══
+      // Generate shared components BEFORE template-specific files so pages can import them
+      this.log('Generating shared components...');
+      this.writeFile('src/components/shared/DataTable.tsx', SharedComponentsGenerator.generateDataTable());
+      this.writeFile('src/components/shared/Modal.tsx', SharedComponentsGenerator.generateModal());
+      this.writeFile('src/components/shared/FormField.tsx', SharedComponentsGenerator.generateFormField());
+      this.writeFile('src/components/shared/Toast.tsx', SharedComponentsGenerator.generateToast());
+      this.writeFile('src/components/shared/Sidebar.tsx', SharedComponentsGenerator.generateSidebar());
+      this.writeFile('src/components/shared/UtilityComponents.tsx', SharedComponentsGenerator.generateUtilityComponents());
+      this.writeFile('src/components/shared/index.ts', SharedComponentsGenerator.generateIndex([
+        'DataTable',
+        'Modal',
+        'FormField',
+        'Toast',
+        'Sidebar',
+        'UtilityComponents',
+      ]));
+      this.log('Shared components generated successfully');
+
       // Generate template-specific files
       switch (this.templateType) {
-        case 'MARKETPLACE_MINI':
-          this.log('Generating marketplace Prisma schema...');
-          this.writeFile('prisma/schema.prisma', MarketplaceGenerator.generatePrismaSchema(this.parameters));
+        case 'MARKETPLACE_MINI': {
+          this.log('Generating marketplace advanced Prisma schema...');
+          this.writeFile('prisma/schema.prisma', MarketplaceAdvancedTemplate.generateAdvancedPrismaSchema(this.parameters));
 
-          this.log('Generating marketplace API routes...');
-          this.writeFile('src/app/api/listings/route.ts', MarketplaceGenerator.generateListingsRoute(this.parameters));
-          this.writeFile('src/app/api/listings/[id]/route.ts', MarketplaceGenerator.generateListingIdRoute(this.parameters));
-          this.writeFile('src/app/api/listings/search/route.ts', MarketplaceGenerator.generateSearchRoute(this.parameters));
-          this.writeFile('src/app/api/transactions/route.ts', MarketplaceGenerator.generateTransactionsRoute(this.parameters));
+          this.log('Generating marketplace advanced API routes...');
+          const marketplaceApiRoutes = MarketplaceAdvancedTemplate.generateApiRoutes(this.parameters);
+          for (const route of marketplaceApiRoutes) {
+            this.log(`  API route: ${route.path}`);
+            this.writeFile(route.path, route.content);
+          }
 
-          this.log('Generating marketplace UI pages...');
-          this.writeFile('src/app/(dashboard)/dashboard/listings/page.tsx', MarketplaceGenerator.generateListingsPage(this.parameters));
-          this.writeFile('src/app/(dashboard)/dashboard/listings/[id]/page.tsx', MarketplaceGenerator.generateListingDetailPage(this.parameters));
-          this.writeFile('src/app/(dashboard)/dashboard/listings/publish/page.tsx', MarketplaceGenerator.generatePublishListingPage(this.parameters));
-          this.writeFile('src/app/(dashboard)/dashboard/seller/page.tsx', MarketplaceGenerator.generateSellerDashboardPage(this.parameters));
+          this.log('Generating marketplace advanced UI pages...');
+          this.writeFile('src/app/(dashboard)/dashboard/seller/page.tsx', MarketplaceAdvancedTemplate.generateSellerDashboard(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/listings/page.tsx', MarketplaceAdvancedTemplate.generateListingManagement(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/listings/[id]/page.tsx', MarketplaceAdvancedTemplate.generateListingDetail(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/search/page.tsx', MarketplaceAdvancedTemplate.generateSearchPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/sellers/[id]/page.tsx', MarketplaceAdvancedTemplate.generateSellerProfile(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/messages/page.tsx', MarketplaceAdvancedTemplate.generateMessaging(this.parameters));
+
+          this.log('Generating marketplace specific components...');
+          this.writeFile('src/components/marketplace/ListingCard.tsx', MarketplaceAdvancedTemplate.generateListingCard());
+          this.writeFile('src/components/marketplace/SearchFilters.tsx', MarketplaceAdvancedTemplate.generateSearchFilters());
+          this.writeFile('src/components/marketplace/ReviewStars.tsx', MarketplaceAdvancedTemplate.generateReviewStars());
+          this.writeFile('src/components/marketplace/SellerBadge.tsx', MarketplaceAdvancedTemplate.generateSellerBadge());
 
           this.log('Generating marketplace dashboard page...');
           this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
           break;
+        }
 
-        case 'ECOMMERCE_MINI':
-          this.log('Generating e-commerce Prisma schema...');
-          this.writeFile('prisma/schema.prisma', EcommerceGenerator.generatePrismaSchema(this.parameters));
+        case 'ECOMMERCE_MINI': {
+          this.log('Generating e-commerce advanced Prisma schema...');
+          this.writeFile('prisma/schema.prisma', EcommerceAdvancedTemplate.generateAdvancedPrismaSchema(this.parameters));
 
-          this.log('Generating e-commerce API routes...');
-          this.writeFile('src/app/api/products/route.ts', EcommerceGenerator.generateProductsRoute(this.parameters));
-          this.writeFile('src/app/api/products/[id]/route.ts', EcommerceGenerator.generateProductIdRoute(this.parameters));
-          this.writeFile('src/app/api/cart/route.ts', EcommerceGenerator.generateCartRoute(this.parameters));
-          this.writeFile('src/app/api/orders/route.ts', EcommerceGenerator.generateOrdersRoute(this.parameters));
+          this.log('Generating e-commerce advanced API routes...');
+          const ecommerceApiRoutes = EcommerceAdvancedTemplate.generateApiRoutes(this.parameters);
+          for (const route of ecommerceApiRoutes) {
+            this.log(`  API route: ${route.path}`);
+            this.writeFile(route.path, route.content);
+          }
 
-          this.log('Generating e-commerce UI pages...');
-          this.writeFile('src/app/(dashboard)/dashboard/catalog/page.tsx', EcommerceGenerator.generateCatalogPage(this.parameters));
-          this.writeFile('src/app/(dashboard)/dashboard/catalog/[id]/page.tsx', EcommerceGenerator.generateProductDetailPage(this.parameters));
-          this.writeFile('src/app/(dashboard)/dashboard/cart/page.tsx', EcommerceGenerator.generateCartPage(this.parameters));
-          this.writeFile('src/app/(dashboard)/dashboard/checkout/page.tsx', EcommerceGenerator.generateCheckoutPage(this.parameters));
+          this.log('Generating e-commerce advanced UI pages...');
+          this.writeFile('src/app/(dashboard)/dashboard/catalog/page.tsx', EcommerceAdvancedTemplate.generateCatalogPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/catalog/[id]/page.tsx', EcommerceAdvancedTemplate.generateProductDetailPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/cart/page.tsx', EcommerceAdvancedTemplate.generateCartPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/checkout/page.tsx', EcommerceAdvancedTemplate.generateCheckoutPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/orders/page.tsx', EcommerceAdvancedTemplate.generateOrderHistoryPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/orders/[id]/page.tsx', EcommerceAdvancedTemplate.generateOrderDetailPage(this.parameters));
+
+          this.log('Generating e-commerce specific components...');
+          this.writeFile('src/components/ecommerce/ProductCard.tsx', EcommerceAdvancedTemplate.generateProductCard());
+          this.writeFile('src/components/ecommerce/CartSummary.tsx', EcommerceAdvancedTemplate.generateCartSummary());
+          this.writeFile('src/components/ecommerce/QuantitySelector.tsx', EcommerceAdvancedTemplate.generateQuantitySelector());
+          this.writeFile('src/components/ecommerce/CheckoutStepper.tsx', EcommerceAdvancedTemplate.generateCheckoutStepper());
+          this.writeFile('src/components/ecommerce/OrderStatusBadge.tsx', EcommerceAdvancedTemplate.generateOrderStatusBadge());
 
           this.log('Generating e-commerce dashboard page...');
           this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
           break;
+        }
 
-        case 'LANDING_BLOG':
-          this.log('Generating landing+blog Prisma schema...');
-          this.writeFile('prisma/schema.prisma', LandingBlogGenerator.generatePrismaSchema(this.parameters));
+        case 'LANDING_BLOG': {
+          this.log('Generating landing+blog advanced Prisma schema...');
+          this.writeFile('prisma/schema.prisma', LandingBlogAdvancedTemplate.generateAdvancedPrismaSchema(this.parameters));
 
-          this.log('Generating landing+blog API routes...');
-          this.writeFile('src/app/api/posts/route.ts', LandingBlogGenerator.generatePostsRoute(this.parameters));
-          this.writeFile('src/app/api/posts/[id]/route.ts', LandingBlogGenerator.generatePostIdRoute(this.parameters));
-          this.writeFile('src/app/api/categories/route.ts', LandingBlogGenerator.generateCategoriesRoute(this.parameters));
-          this.writeFile('src/app/api/contact/route.ts', LandingBlogGenerator.generateContactRoute(this.parameters));
+          this.log('Generating landing+blog advanced API routes...');
+          const blogApiRoutes = LandingBlogAdvancedTemplate.generateApiRoutes(this.parameters);
+          for (const route of blogApiRoutes) {
+            this.log(`  API route: ${route.path}`);
+            this.writeFile(route.path, route.content);
+          }
 
-          this.log('Generating landing+blog UI pages...');
-          this.writeFile('src/app/page.tsx', LandingBlogGenerator.generateLandingPage(this.parameters));
-          this.writeFile('src/app/blog/page.tsx', LandingBlogGenerator.generateBlogListPage(this.parameters));
-          this.writeFile('src/app/blog/[slug]/page.tsx', LandingBlogGenerator.generateBlogPostPage(this.parameters));
-          this.writeFile('src/app/contacto/page.tsx', LandingBlogGenerator.generateContactPage(this.parameters));
+          this.log('Generating landing+blog advanced UI pages...');
+          this.writeFile('src/app/page.tsx', LandingBlogAdvancedTemplate.generateBlogListPage(this.parameters));
+          this.writeFile('src/app/blog/page.tsx', LandingBlogAdvancedTemplate.generateBlogListPage(this.parameters));
+          this.writeFile('src/app/blog/[slug]/page.tsx', LandingBlogAdvancedTemplate.generateArticlePage(this.parameters));
+          this.writeFile('src/app/contacto/page.tsx', LandingBlogAdvancedTemplate.generateContactPage(this.parameters));
+          this.writeFile('src/app/acerca/page.tsx', LandingBlogAdvancedTemplate.generateAboutPage(this.parameters));
+          this.writeFile('src/app/newsletter/page.tsx', LandingBlogAdvancedTemplate.generateNewsletterPage(this.parameters));
 
-          this.log('Generating SEO components...');
-          this.writeFile('src/components/SeoHead.tsx', LandingBlogGenerator.generateSeoComponents(this.parameters));
+          this.log('Generating landing+blog specific components...');
+          this.writeFile('src/components/blog/ArticleCard.tsx', LandingBlogAdvancedTemplate.generateArticleCard());
+          this.writeFile('src/components/blog/CategoryBadge.tsx', LandingBlogAdvancedTemplate.generateCategoryBadge());
+          this.writeFile('src/components/blog/TableOfContents.tsx', LandingBlogAdvancedTemplate.generateTableOfContents());
+          this.writeFile('src/components/blog/NewsletterForm.tsx', LandingBlogAdvancedTemplate.generateNewsletterForm());
+          this.writeFile('src/components/blog/ShareButtons.tsx', LandingBlogAdvancedTemplate.generateShareButtons());
 
           this.log('Generating landing+blog dashboard page...');
           this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
           break;
+        }
 
         default: {
-          // SAAS_BASIC - existing behavior
-          const entityNamePlural = this.parameters.entityName.toLowerCase() + 's';
-          this.log(`Generating ${entityNamePlural} API routes...`);
-          this.writeFile(`src/app/api/${entityNamePlural}/route.ts`, ApiRoutesGenerator.generateEntityRoute(this.parameters));
-          this.writeFile(`src/app/api/${entityNamePlural}/[id]/route.ts`, ApiRoutesGenerator.generateEntityIdRoute(this.parameters));
+          // SAAS_BASIC — Advanced template with full CRUD, onboarding, settings, billing, etc.
+          const entityNameLower = this.parameters.entityName.toLowerCase();
+          const entityNamePlural = entityNameLower + 's';
 
-          this.log('Generating dashboard page...');
+          this.log('Generating SaaS advanced Prisma schema...');
+          this.writeFile('prisma/schema.prisma', SaasAdvancedTemplate.generateAdvancedPrismaSchema(this.parameters));
+
+          this.log('Generating SaaS advanced API routes...');
+          const saasApiRoutes = SaasAdvancedTemplate.generateApiRoutes(this.parameters);
+          for (const route of saasApiRoutes) {
+            this.log(`  API route: ${route.path}`);
+            this.writeFile(route.path, route.content);
+          }
+
+          this.log('Generating SaaS advanced dashboard layout...');
+          this.writeFile('src/app/(dashboard)/dashboard/layout.tsx', SaasAdvancedTemplate.generateDashboardLayout(this.parameters));
+
+          this.log('Generating SaaS advanced UI pages...');
           this.writeFile('src/app/(dashboard)/dashboard/page.tsx', DashboardPagesGenerator.generateDashboardPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/onboarding/page.tsx', SaasAdvancedTemplate.generateOnboardingPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/settings/page.tsx', SaasAdvancedTemplate.generateSettingsPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/billing/page.tsx', SaasAdvancedTemplate.generateBillingPage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/profile/page.tsx', SaasAdvancedTemplate.generateProfilePage(this.parameters));
+          this.writeFile('src/app/(dashboard)/dashboard/notifications/page.tsx', SaasAdvancedTemplate.generateNotificationsPage(this.parameters));
 
-          this.log(`Generating new ${this.parameters.entityName.toLowerCase()} page...`);
-          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/new/page.tsx`, DashboardPagesGenerator.generateNewEntityPage(this.parameters));
-
-          this.log(`Generating view ${this.parameters.entityName.toLowerCase()} page...`);
-          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/page.tsx`, DashboardPagesGenerator.generateViewEntityPage(this.parameters));
-
-          this.log(`Generating edit ${this.parameters.entityName.toLowerCase()} page...`);
-          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/edit/page.tsx`, DashboardPagesGenerator.generateEditEntityPage(this.parameters));
+          this.log('Generating SaaS CRUD pages with React components...');
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/page.tsx`, SaasAdvancedTemplate.generateCrudListPage(this.parameters));
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/new/page.tsx`, SaasAdvancedTemplate.generateCrudCreatePage(this.parameters));
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/page.tsx`, SaasAdvancedTemplate.generateCrudDetailPage(this.parameters));
+          this.writeFile(`src/app/(dashboard)/dashboard/${entityNamePlural}/[id]/edit/page.tsx`, SaasAdvancedTemplate.generateCrudEditPage(this.parameters));
           break;
         }
       }
@@ -251,6 +316,10 @@ export class BuildExecutor {
       // Update root layout to include SessionProvider
       this.log('Updating root layout with SessionProvider...');
       this.writeFile('src/app/layout.tsx', this.generateRootLayoutWithSession());
+
+      // ═══ PREMIUM ENGINE INTEGRATION ═══
+      this.log('Applying premium design system...');
+      await this.applyPremiumOverrides();
 
       this.log('Code generation completed successfully!');
       this.log(`Build output: ${this.buildDir}`);
@@ -322,6 +391,56 @@ export class BuildExecutor {
       });
       
       throw error;
+    }
+  }
+
+  /**
+   * Apply premium design overrides using the Premium Engine.
+   * Fetches UX/UI blueprint from the generation session and generates premium files.
+   */
+  private async applyPremiumOverrides(): Promise<void> {
+    try {
+      // Try to fetch UX/UI blueprint from the generation session
+      const session = await prisma.generationSession.findFirst({
+        where: { projectId: this.projectId },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          AgentArtifact: {
+            where: { agentType: 'UX_UI_AGENT' },
+          },
+        },
+      });
+
+      let blueprint: Record<string, unknown> = {};
+      if (session?.AgentArtifact?.[0]?.content) {
+        const raw = session.AgentArtifact[0].content;
+        blueprint = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>);
+        this.log('Found UX/UI blueprint, parsing design tokens...');
+      } else {
+        this.log('No UX/UI blueprint found, using default design tokens...');
+      }
+
+      const tokens = parseUxBlueprint(blueprint);
+      this.log(`Design tokens: ${tokens.colorMode} mode, hero=${tokens.heroVariant}, gradient=${tokens.accentGradient.from}→${tokens.accentGradient.to}`);
+
+      const premiumFiles = PremiumBuildIntegration.generatePremiumFiles(
+        this.templateType,
+        {
+          appName: this.parameters.appName,
+          entityName: this.parameters.entityName,
+        },
+        tokens
+      );
+
+      for (const file of premiumFiles) {
+        this.log(`Premium override: ${file.path}`);
+        this.writeFile(file.path, file.content);
+      }
+
+      this.log(`Applied ${premiumFiles.length} premium file overrides`);
+    } catch (error: any) {
+      // Non-fatal: if premium fails, basic files are already in place
+      this.log(`Premium override warning (non-fatal): ${error.message}`);
     }
   }
 

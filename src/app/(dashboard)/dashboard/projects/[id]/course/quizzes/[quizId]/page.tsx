@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface Quiz {
   id: string;
@@ -15,10 +15,15 @@ interface Quiz {
   };
 }
 
+interface QuizOption {
+  id: string;
+  text: string;
+}
+
 interface Question {
   id: string;
   question: string;
-  options: string[];
+  options: QuizOption[];
 }
 
 export default function QuizPage({
@@ -134,11 +139,11 @@ export default function QuizPage({
               {index + 1}. {question.question}
             </h3>
             <div className="space-y-2">
-              {question.options.map((option, optIdx) => (
+              {question.options.map((option) => (
                 <label
-                  key={optIdx}
+                  key={option.id}
                   className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
-                    answers[question.id] === option
+                    answers[question.id] === option.id
                       ? 'bg-blue-600/20 border-2 border-blue-500'
                       : 'bg-gray-700 border-2 border-transparent hover:border-gray-600'
                   }`}
@@ -146,14 +151,14 @@ export default function QuizPage({
                   <input
                     type="radio"
                     name={question.id}
-                    value={option}
-                    checked={answers[question.id] === option}
+                    value={option.id}
+                    checked={answers[question.id] === option.id}
                     onChange={(e) =>
                       setAnswers({ ...answers, [question.id]: e.target.value })
                     }
                     className="w-4 h-4"
                   />
-                  <span className="text-gray-300">{option}</span>
+                  <span className="text-gray-300">{option.text}</span>
                 </label>
               ))}
             </div>

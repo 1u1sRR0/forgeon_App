@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -57,7 +58,7 @@ export default function Sidebar() {
     >
       {/* Logo + Collapse toggle */}
       <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
-        {!collapsed && <h1 className="text-2xl font-bold text-white pl-2">Forgeon</h1>}
+        {!collapsed && <Image src="/Forgeon_logo_white.png" alt="Forgeon" width={200} height={200} className="h-14 w-auto drop-shadow-[0_0_4px_rgba(255,255,255,0.1)]" />}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="p-2 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition-all"

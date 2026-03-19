@@ -17,6 +17,7 @@ function transformCourseResponse(course: any) {
       description: level.description,
       order: level.levelNumber,
       learningObjectives: Array.isArray(level.objectives) ? level.objectives : [],
+      contentGenerated: level.contentGenerated ?? false,
       lessons: (level.Lesson || []).map((lesson: any) => ({
         id: lesson.id,
         title: lesson.title,

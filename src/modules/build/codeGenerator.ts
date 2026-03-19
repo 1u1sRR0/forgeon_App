@@ -72,7 +72,8 @@ export class CodeGenerator {
     "@prisma/adapter-pg": "^7.4.1",
     "pg": "^8.13.1",
     "next-auth": "^4.24.11",
-    "bcrypt": "^5.1.1"
+    "bcrypt": "^5.1.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "typescript": "^5",

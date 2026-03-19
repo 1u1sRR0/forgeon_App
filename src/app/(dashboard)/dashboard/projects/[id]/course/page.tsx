@@ -3,7 +3,7 @@
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CourseProvider, useCourse } from '@/contexts/CourseContext';
-import { BookOpen, CheckCircle, Clock, RefreshCw, Trophy } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, RefreshCw, Sparkles, Trophy } from 'lucide-react';
 
 function CourseOverviewContent({ projectId }: { projectId: string }) {
   const { course, loading, error, refreshCourse } = useCourse();
@@ -147,12 +147,21 @@ function CourseOverviewContent({ projectId }: { projectId: string }) {
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-6 text-sm text-gray-500">
-                  <span>{level.lessons.length} lecciones</span>
-                  <span>
-                    {level.lessons.filter((l) => l.quiz).length} quizzes
-                  </span>
-                </div>
+                {level.contentGenerated ? (
+                  <div className="flex items-center gap-6 text-sm text-gray-500">
+                    <span>{level.lessons.length} lecciones</span>
+                    <span>
+                      {level.lessons.filter((l) => l.quiz).length} quizzes
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span className="inline-flex items-center rounded-full bg-amber-400/10 px-3 py-1 text-amber-400 border border-amber-400/20">
+                      Se genera al acceder
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Progress Indicator */}

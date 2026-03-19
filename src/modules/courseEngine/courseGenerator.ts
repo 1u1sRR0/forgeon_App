@@ -6,8 +6,51 @@ import { buildQuizzes } from './quizBuilder';
 import { execute, AIModelTask } from '@/modules/aiRuntime';
 
 /**
+ * Level definitions shared between initial generation and on-demand generation
+ */
+const levelDefinitions = [
+  {
+    number: 1,
+    title: 'Entendiendo el Negocio',
+    description: 'Domina tu modelo de negocio, propuesta de valor y posicionamiento en el mercado',
+    topics: ['business_model', 'value_proposition', 'target_market', 'competitive_analysis'],
+  },
+  {
+    number: 2,
+    title: 'Fundamentos Técnicos',
+    description: 'Aprende tu stack tecnológico, arquitectura y flujo de desarrollo',
+    topics: ['tech_stack', 'architecture', 'database', 'authentication', 'api_design'],
+  },
+  {
+    number: 3,
+    title: 'Despliegue y Operaciones',
+    description: 'Despliega tu MVP y configura las operaciones esenciales',
+    topics: ['local_setup', 'environment_config', 'deployment', 'monitoring', 'ci_cd'],
+  },
+  {
+    number: 4,
+    title: 'Legal y Cumplimiento',
+    description: 'Comprende los requisitos legales y las bases del cumplimiento normativo',
+    topics: ['business_registration', 'terms_of_service', 'privacy_policy', 'gdpr', 'payment_compliance'],
+  },
+  {
+    number: 5,
+    title: 'Crecimiento y Escalabilidad',
+    description: 'Estrategias para adquirir usuarios y escalar tu negocio',
+    topics: ['mvp_validation', 'user_acquisition', 'metrics', 'feedback_loops', 'scaling_strategy'],
+  },
+  {
+    number: 6,
+    title: 'Operaciones Avanzadas',
+    description: 'Optimiza operaciones, analítica y procesos de equipo',
+    topics: ['analytics', 'marketing', 'customer_support', 'iteration', 'team_building'],
+  },
+];
+
+/**
  * Main course generation function
  * Deterministic: same inputs = same outputs
+ * Progressive: only Level 1 content is generated initially, levels 2-6 are placeholders
  */
 export async function generateCourse(projectId: string): Promise<void> {
   // 1. Gather project context
@@ -35,56 +78,21 @@ export async function generateCourse(projectId: string): Promise<void> {
     },
   });
   
-  // 4. Generate 6 levels with lessons
+  // 4. Generate 6 levels (only Level 1 with full content, levels 2-6 as placeholders)
   await generateLevels(courseId, context);
 }
 
 /**
- * Generate all 6 course levels
+ * Generate all 6 course levels.
+ * Level 1: full content (lessons + quiz), contentGenerated = true
+ * Levels 2-6: placeholder only (metadata), contentGenerated = false
  */
 async function generateLevels(courseId: string, context: ProjectContext): Promise<void> {
-  const levelDefinitions = [
-    {
-      number: 1,
-      title: 'Entendiendo el Negocio',
-      description: 'Domina tu modelo de negocio, propuesta de valor y posicionamiento en el mercado',
-      topics: ['business_model', 'value_proposition', 'target_market', 'competitive_analysis'],
-    },
-    {
-      number: 2,
-      title: 'Fundamentos Técnicos',
-      description: 'Aprende tu stack tecnológico, arquitectura y flujo de desarrollo',
-      topics: ['tech_stack', 'architecture', 'database', 'authentication', 'api_design'],
-    },
-    {
-      number: 3,
-      title: 'Despliegue y Operaciones',
-      description: 'Despliega tu MVP y configura las operaciones esenciales',
-      topics: ['local_setup', 'environment_config', 'deployment', 'monitoring', 'ci_cd'],
-    },
-    {
-      number: 4,
-      title: 'Legal y Cumplimiento',
-      description: 'Comprende los requisitos legales y las bases del cumplimiento normativo',
-      topics: ['business_registration', 'terms_of_service', 'privacy_policy', 'gdpr', 'payment_compliance'],
-    },
-    {
-      number: 5,
-      title: 'Crecimiento y Escalabilidad',
-      description: 'Estrategias para adquirir usuarios y escalar tu negocio',
-      topics: ['mvp_validation', 'user_acquisition', 'metrics', 'feedback_loops', 'scaling_strategy'],
-    },
-    {
-      number: 6,
-      title: 'Operaciones Avanzadas',
-      description: 'Optimiza operaciones, analítica y procesos de equipo',
-      topics: ['analytics', 'marketing', 'customer_support', 'iteration', 'team_building'],
-    },
-  ];
-  
   for (const def of levelDefinitions) {
     const levelId = generateDeterministicId(courseId, `level-${def.number}`);
+    const isFirstLevel = def.number === 1;
     
+    // Create level record (all levels get metadata)
     await prisma.courseLevel.create({
       data: {
         id: levelId,
@@ -95,55 +103,113 @@ async function generateLevels(courseId: string, context: ProjectContext): Promis
         objectives: def.topics.slice(0, 5).map(topic => 
           `Comprender y aplicar ${topic.replace(/_/g, ' ')} en tu proyecto ${context.businessType}`
         ),
+        contentGenerated: isFirstLevel,
         updatedAt: new Date(),
       },
     });
     
-    // Create lessons with AI-generated content
-    for (let i = 0; i < def.topics.length; i++) {
-      const topic = def.topics[i];
-      const lessonId = generateDeterministicId(levelId, `lesson-${i + 1}`);
-      const topicTitle = topic.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      const content = await generateAILessonContent(topic, topicTitle, def.title, context);
-      const wordCount = content.map(b => (b.content || '') + (b.items?.join(' ') || '')).join(' ').split(/\s+/).length;
-      const estimatedMinutes = Math.max(8, Math.ceil(wordCount / 200));
-      
-      await prisma.lesson.create({
-        data: {
-          id: lessonId,
-          levelId,
-          lessonNumber: i + 1,
-          title: topicTitle,
-          description: `Aprende sobre ${topic.replace(/_/g, ' ')} para tu proyecto ${context.businessType}`,
-          content: content as any,
-          estimatedMinutes,
-          updatedAt: new Date(),
-        },
-      });
+    // Only generate lessons and quiz for Level 1
+    if (isFirstLevel) {
+      await generateLevelLessonsAndQuiz(levelId, def, context);
     }
+  }
+}
+
+/**
+ * Generate lessons and quiz for a single level definition.
+ * Shared between initial generation (Level 1) and on-demand generation.
+ */
+async function generateLevelLessonsAndQuiz(
+  levelId: string,
+  def: { number: number; title: string; topics: string[] },
+  context: ProjectContext
+): Promise<void> {
+  // Create lessons with AI-generated content
+  for (let i = 0; i < def.topics.length; i++) {
+    const topic = def.topics[i];
+    const lessonId = generateDeterministicId(levelId, `lesson-${i + 1}`);
+    const topicTitle = topic.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const content = await generateAILessonContent(topic, topicTitle, def.title, context);
+    const wordCount = content.map(b => (b.content || '') + (b.items?.join(' ') || '')).join(' ').split(/\s+/).length;
+    const estimatedMinutes = Math.max(8, Math.ceil(wordCount / 200));
     
-    // Create quiz with real questions from quizBuilder
-    const quizData = buildQuizzes(def.number, def.title, context);
-    const quizId = generateDeterministicId(levelId, 'quiz');
-    await prisma.quiz.create({
+    await prisma.lesson.create({
       data: {
-        id: quizId,
+        id: lessonId,
         levelId,
-        title: `${def.title} - Evaluación`,
-        description: `Evalúa tu comprensión de los conceptos de ${def.title.toLowerCase()}`,
-        questions: quizData.questions.map((q, qi) => ({
-          id: generateDeterministicId(quizId, `q${qi + 1}`),
-          question: q.question,
-          options: q.options,
-          correctAnswer: q.correctOptionId,
-          explanation: q.explanation,
-          category: q.category,
-        })) as any,
-        passingScore: 70,
+        lessonNumber: i + 1,
+        title: topicTitle,
+        description: `Aprende sobre ${topic.replace(/_/g, ' ')} para tu proyecto ${context.businessType}`,
+        content: content as any,
+        estimatedMinutes,
         updatedAt: new Date(),
       },
     });
   }
+  
+  // Create quiz with real questions from quizBuilder
+  const quizData = buildQuizzes(def.number, def.title, context);
+  const quizId = generateDeterministicId(levelId, 'quiz');
+  await prisma.quiz.create({
+    data: {
+      id: quizId,
+      levelId,
+      title: `${def.title} - Evaluación`,
+      description: `Evalúa tu comprensión de los conceptos de ${def.title.toLowerCase()}`,
+      questions: quizData.questions.map((q, qi) => ({
+        id: generateDeterministicId(quizId, `q${qi + 1}`),
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correctOptionId,
+        explanation: q.explanation,
+        category: q.category,
+      })) as any,
+      passingScore: 70,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+/**
+ * Generate content (lessons + quiz) for a specific level on demand.
+ * Called when a user navigates to a level that hasn't been generated yet.
+ * Idempotent: cleans up any partial data from previous failed attempts before regenerating.
+ */
+export async function generateLevelContent(levelId: string, projectId: string): Promise<void> {
+  // Get the level from the database to find its levelNumber
+  const level = await prisma.courseLevel.findUnique({
+    where: { id: levelId },
+  });
+  
+  if (!level) {
+    throw new Error(`Level ${levelId} not found`);
+  }
+  
+  if (level.contentGenerated) {
+    return; // Already generated, nothing to do
+  }
+  
+  // Find the matching level definition by levelNumber
+  const def = levelDefinitions.find(d => d.number === level.levelNumber);
+  if (!def) {
+    throw new Error(`No level definition found for level number ${level.levelNumber}`);
+  }
+  
+  // Build project context
+  const context = await buildProjectContext(projectId);
+  
+  // Clean up any partial data from previous failed attempts (idempotency)
+  await prisma.quiz.deleteMany({ where: { levelId } });
+  await prisma.lesson.deleteMany({ where: { levelId } });
+  
+  // Generate lessons and quiz
+  await generateLevelLessonsAndQuiz(levelId, def, context);
+  
+  // Mark level as content generated
+  await prisma.courseLevel.update({
+    where: { id: levelId },
+    data: { contentGenerated: true },
+  });
 }
 
 /**
@@ -440,7 +506,7 @@ function buildStaticLessonContent(topic: string, topicTitle: string, context: Pr
 /**
  * Build project context from database
  */
-async function buildProjectContext(projectId: string): Promise<ProjectContext> {
+export async function buildProjectContext(projectId: string): Promise<ProjectContext> {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {

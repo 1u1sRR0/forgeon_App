@@ -73,17 +73,18 @@ model Course {
 }
 
 model CourseLevel {
-  id          String   @id @default(uuid())
-  courseId    String
-  levelNumber Int
-  title       String
-  description String
-  objectives  Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  Course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  Lesson      Lesson[]
-  Quiz        Quiz[]
+  id               String   @id @default(uuid())
+  courseId          String
+  levelNumber      Int
+  title            String
+  description      String
+  objectives       Json
+  contentGenerated Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  Course           Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  Lesson           Lesson[]
+  Quiz             Quiz[]
 
   @@unique([courseId, levelNumber])
   @@index([courseId])

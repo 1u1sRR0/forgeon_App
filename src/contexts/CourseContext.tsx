@@ -15,6 +15,7 @@ interface CourseLevel {
   description: string;
   order: number;
   learningObjectives: string[];
+  contentGenerated: boolean;
   lessons: Lesson[];
 }
 

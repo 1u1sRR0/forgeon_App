@@ -35,6 +35,10 @@ Output ONLY valid JSON with these keys:
 - userRoles (array of {name, permissions[]})
 - workflows (array of {name, steps[]})
 - mvpScope (string)
+- detailedFlows (OPTIONAL array of user flow objects — include when possible for richer code generation)
+  Each flow: { name: string, steps: [{ page: string, action: string, dataRequired: string[], validations: string[], errorStates: string[] }] }
+  Example: { "name": "Registro", "steps": [{ "page": "/register", "action": "submit form", "dataRequired": ["email", "password"], "validations": ["email format", "password min 8"], "errorStates": ["email already exists"] }] }
+  Describe every user flow end-to-end: registration, onboarding, CRUD operations, settings, etc.
 Write in the SAME LANGUAGE as the Master Prompt.`,
     buildUserPrompt: (mp, prev) =>
       `Master Prompt:\n${mp}\n\nBusiness Strategy:\n${prev.BUSINESS_STRATEGIST || 'N/A'}\n\nGenerate the product blueprint as JSON.`,
@@ -43,16 +47,32 @@ Write in the SAME LANGUAGE as the Master Prompt.`,
     type: 'UX_UI_AGENT',
     name: 'UX/UI Designer',
     emoji: '🎨',
-    systemPrompt: `You are a UX/UI Designer AI agent. Based on the product blueprint, produce a JSON UX/UI blueprint.
+    systemPrompt: `You are a Premium UX/UI Designer AI agent. Based on the product blueprint, produce a JSON UX/UI blueprint with a modern, professional design system.
 Output ONLY valid JSON with these keys:
-- designSystem (object with colors, typography, spacing)
+- designSystem (object with colors: {primary, secondary, accent, background, text} as hex strings, typography: {headingFont, bodyFont, fontFamily}, spacing: {base: number in px})
 - pages (array of {name, route, layout, components[]})
 - navigationStructure (object)
 - responsiveStrategy (string)
 - accessibilityNotes (string)
+- heroVariant (one of: "centered", "split", "background-image", "video" — choose the best for the product)
+- fontPairing (object with heading and body font names, e.g. {heading: "Inter", body: "Inter"} — pick modern, clean fonts)
+- sectionOrder (array of section names in order, e.g. ["hero", "features", "pricing", "testimonials", "cta"])
+- colorMode ("light" or "dark" — choose based on the product's brand personality)
+- accentGradient (object with from and to hex colors for the main gradient accent)
+- componentSpecs (OPTIONAL array of UI component specifications — include when possible for richer code generation)
+  Each spec: { name: string, props: [{ name: string, type: string }], states: string[], variants: string[] }
+  Example: { "name": "ProductCard", "props": [{ "name": "title", "type": "string" }, { "name": "price", "type": "number" }], "states": ["loading", "error", "empty"], "variants": ["compact", "full", "featured"] }
+  Describe every UI component the product needs: cards, forms, modals, tables, navigation elements, etc.
+
+IMPORTANT DESIGN GUIDELINES:
+- Choose a cohesive, modern color palette. Use vibrant but not overwhelming accent colors.
+- Pick font pairings that convey professionalism (e.g. Inter, Plus Jakarta Sans, DM Sans, Manrope, Outfit).
+- The heroVariant should match the product type: "split" for SaaS, "centered" for landing pages, "background-image" for marketplaces.
+- The accentGradient should complement the primary and accent colors.
+- Prefer dark mode (colorMode: "dark") for tech/SaaS products, light mode for consumer/e-commerce.
 Write in the SAME LANGUAGE as the Master Prompt.`,
     buildUserPrompt: (mp, prev) =>
-      `Master Prompt:\n${mp}\n\nProduct Blueprint:\n${prev.PRODUCT_ARCHITECT || 'N/A'}\n\nGenerate the UX/UI blueprint as JSON.`,
+      `Master Prompt:\n${mp}\n\nProduct Blueprint:\n${prev.PRODUCT_ARCHITECT || 'N/A'}\n\nGenerate the UX/UI blueprint as JSON. Include heroVariant, fontPairing, sectionOrder, colorMode, and accentGradient fields for the premium design system.`,
   },
   {
     type: 'TECHNICAL_ARCHITECT',
@@ -66,6 +86,10 @@ Output ONLY valid JSON with these keys:
 - apiRoutes (array of {method, path, description})
 - authArchitecture (string)
 - deploymentNotes (string)
+- zodSchemas (OPTIONAL array of Zod validation schema specifications — include when possible for richer code generation)
+  Each schema: { name: string, endpoint: string, fields: [{ name: string, type: string, rules: string[] }] }
+  Example: { "name": "createPostSchema", "endpoint": "/api/posts", "fields": [{ "name": "title", "type": "string", "rules": ["min(3)", "max(200)"] }, { "name": "content", "type": "string", "rules": ["min(10)"] }] }
+  Define a Zod schema for every API endpoint that accepts input data (POST, PUT, PATCH). Include field types and validation rules.
 Write in the SAME LANGUAGE as the Master Prompt.`,
     buildUserPrompt: (mp, prev) =>
       `Master Prompt:\n${mp}\n\nProduct Blueprint:\n${prev.PRODUCT_ARCHITECT || 'N/A'}\n\nUX/UI Blueprint:\n${prev.UX_UI_AGENT || 'N/A'}\n\nGenerate the technical blueprint as JSON.`,
@@ -96,6 +120,10 @@ Output ONLY valid JSON with these keys:
 - moduleBreakdown (array of {name, files[], description})
 - buildSequence (array of strings)
 - estimatedTimeline (string)
+- sharedComponents (OPTIONAL array of shared/reusable component specifications — include when possible for richer code generation)
+  Each component: { name: string, props: [{ name: string, type: string }], description: string }
+  Example: { "name": "DataTable", "props": [{ "name": "columns", "type": "Column[]" }, { "name": "data", "type": "T[]" }], "description": "Reusable data table with pagination, sorting, and search" }
+  List every shared UI component the project needs in src/components/shared/: DataTable, Modal, FormField, Toast, Sidebar, etc.
 Write in the SAME LANGUAGE as the Master Prompt.`,
     buildUserPrompt: (mp, prev) =>
       `Master Prompt:\n${mp}\n\nTechnical Blueprint:\n${prev.TECHNICAL_ARCHITECT || 'N/A'}\n\nProduct Blueprint:\n${prev.PRODUCT_ARCHITECT || 'N/A'}\n\nQA Report:\n${prev.QA_CRITICAL_AGENT || 'N/A'}\n\nGenerate the build plan as JSON.`,

@@ -1,8 +1,8 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, CheckCircle, Clock, PlayCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen, CheckCircle, Clock, Loader2, PlayCircle, RefreshCw, Sparkles } from 'lucide-react';
 
 interface Level {
   id: string;
@@ -38,32 +38,129 @@ export default function LevelDetailPage({
   const [level, setLevel] = useState<Level | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const generatingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    const fetchLevel = async () => {
-      try {
-        const response = await fetch(`/api/projects/${projectId}/course/levels/${levelId}`);
-        if (!response.ok) {
-          console.error('Error fetching level: status', response.status);
-          return;
-        }
-        const data = await response.json();
-        setLevel(data.level);
-        setProgress(data.progress);
-      } catch (error) {
-        console.error('Error fetching level:', error);
-      } finally {
-        setLoading(false);
+  const fetchLevel = useCallback(async () => {
+    setLoading(true);
+    setGenerating(false);
+    setError(null);
+
+    // After 2 seconds of loading, switch to "generating" state
+    generatingTimerRef.current = setTimeout(() => {
+      setGenerating(true);
+    }, 2000);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/course/levels/${levelId}`);
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const message = data?.error || `Error al cargar el nivel (código ${response.status})`;
+        setError(message);
+        return;
       }
-    };
-
-    fetchLevel();
+      const data = await response.json();
+      setLevel(data.level);
+      setProgress(data.progress);
+    } catch (err) {
+      console.error('Error fetching level:', err);
+      setError('Error de conexión. Verifica tu red e intenta de nuevo.');
+    } finally {
+      if (generatingTimerRef.current) {
+        clearTimeout(generatingTimerRef.current);
+        generatingTimerRef.current = null;
+      }
+      setLoading(false);
+      setGenerating(false);
+    }
   }, [projectId, levelId]);
 
-  if (loading) {
+  useEffect(() => {
+    fetchLevel();
+    return () => {
+      if (generatingTimerRef.current) {
+        clearTimeout(generatingTimerRef.current);
+      }
+    };
+  }, [fetchLevel]);
+
+  // Initial loading spinner (before generating state kicks in)
+  if (loading && !generating) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Generating state: animated progress bar with level info
+  if (loading && generating) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-gray-800 rounded-xl p-8 border border-gray-700 text-center">
+            <div className="flex justify-center mb-6">
+              <div className="relative">
+                <Sparkles className="w-12 h-12 text-blue-400 animate-pulse" />
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">
+              Generando contenido
+            </h2>
+            <p className="text-gray-400 mb-6">
+              Preparando las lecciones y evaluaciones para este nivel. Esto puede tomar unos momentos...
+            </p>
+            {/* Indeterminate animated progress bar */}
+            <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden mb-4">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 rounded-full animate-indeterminate-progress"
+                style={{ width: '40%' }}
+              />
+            </div>
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Generando contenido...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state with retry button
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-gray-800 rounded-xl p-8 border border-red-500/30 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                <span className="text-2xl">⚠️</span>
+              </div>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">
+              Error al generar contenido
+            </h2>
+            <p className="text-gray-400 mb-6">{error}</p>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={fetchLevel}
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Reintentar
+              </button>
+              <button
+                onClick={() => router.push(`/dashboard/projects/${projectId}/course`)}
+                className="flex items-center justify-center gap-2 px-6 py-3 text-gray-400 hover:text-white transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver al Curso
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
